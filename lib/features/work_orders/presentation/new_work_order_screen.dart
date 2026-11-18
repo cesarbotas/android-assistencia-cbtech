@@ -2,9 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/primary_button.dart';
+import '../../customers/data/models/customer.dart';
+import '../../customers/presentation/customers_controller.dart';
+import '../data/models/budget.dart';
+import '../data/models/budget_item.dart';
+import '../data/models/work_order.dart';
+import '../data/models/work_order_attachment.dart';
+import '../data/models/work_order_status.dart';
+import 'work_orders_controller.dart';
 
 class NewWorkOrderScreen extends ConsumerStatefulWidget {
   const NewWorkOrderScreen({super.key});
@@ -15,8 +24,10 @@ class NewWorkOrderScreen extends ConsumerStatefulWidget {
 
 class _NewWorkOrderScreenState extends ConsumerState<NewWorkOrderScreen> {
   int _currentStep = 0;
+  bool _isSubmitting = false;
 
   // 1. Cliente
+  Customer? _selectedCustomer;
   final _clientNameController = TextEditingController();
   final _clientPhoneController = TextEditingController();
   final _clientCpfController = TextEditingController();
@@ -80,43 +91,160 @@ class _NewWorkOrderScreenState extends ConsumerState<NewWorkOrderScreen> {
     }
   }
 
-  void _finishWorkOrder() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.green),
-            SizedBox(width: 8),
-            Text('Ordem Aberta!'),
+  Future<void> _finishWorkOrder() async {
+    final clientName = _clientNameController.text.trim();
+    if (clientName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, informe o nome do cliente.')),
+      );
+      setState(() => _currentStep = 0);
+      return;
+    }
+
+    final defect = _reportedDefectController.text.trim();
+    if (defect.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, informe o defeito do aparelho.')),
+      );
+      setState(() => _currentStep = 3);
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    const uuid = Uuid();
+    final partsVal = double.tryParse(_partsCostController.text.replaceAll('.', '').replaceAll(',', '.')) ?? 0.0;
+    final serviceVal = double.tryParse(_servicePriceController.text.replaceAll('.', '').replaceAll(',', '.')) ?? 0.0;
+
+    Budget? initialBudget;
+    if (partsVal > 0 || serviceVal > 0) {
+      final items = <BudgetItem>[];
+      if (partsVal > 0) {
+        items.add(
+          BudgetItem(
+            id: uuid.v4(),
+            type: BudgetItemType.product,
+            description: 'Peças e Componentes de Reposição',
+            quantity: 1,
+            costSnapshot: partsVal * 0.5,
+            salePriceSnapshot: partsVal,
+          ),
+        );
+      }
+      if (serviceVal > 0) {
+        items.add(
+          BudgetItem(
+            id: uuid.v4(),
+            type: BudgetItemType.service,
+            description: 'Mão de Obra Técnica Especializada',
+            quantity: 1,
+            costSnapshot: 0.0,
+            salePriceSnapshot: serviceVal,
+          ),
+        );
+      }
+
+      initialBudget = Budget(
+        id: uuid.v4(),
+        workOrderId: '',
+        revision: 1,
+        status: BudgetStatus.pendente,
+        createdAt: DateTime.now(),
+        items: items,
+      );
+    }
+
+    final attachments = _devicePhotos
+        .map(
+          (p) => WorkOrderAttachment(
+            id: uuid.v4(),
+            workOrderId: '',
+            type: AttachmentType.recebimento,
+            fileName: p.name,
+            filePath: p.path,
+            createdAt: DateTime.now(),
+          ),
+        )
+        .toList();
+
+    final order = WorkOrder(
+      id: '',
+      tenantId: '11111111-1111-1111-1111-111111111111',
+      sequentialNumber: '',
+      customerId: _selectedCustomer?.id ?? uuid.v4(),
+      customerName: clientName,
+      customerPhone: _clientPhoneController.text.trim().isNotEmpty
+          ? _clientPhoneController.text.trim()
+          : '(00) 00000-0000',
+      deviceBrand: _selectedBrand,
+      deviceModel: _modelController.text.trim().isNotEmpty ? _modelController.text.trim() : 'Genérico',
+      deviceImei: _imeiController.text.trim().isNotEmpty ? _imeiController.text.trim() : null,
+      deviceColor: _colorController.text.trim().isNotEmpty ? _colorController.text.trim() : null,
+      defectReported: defect,
+      physicalCondition: _physicalConditionController.text.trim().isNotEmpty
+          ? _physicalConditionController.text.trim()
+          : null,
+      accessoriesLeft: _accessoriesController.text.trim().isNotEmpty
+          ? _accessoriesController.text.trim()
+          : null,
+      priority: _priority,
+      status: initialBudget != null ? WorkOrderStatus.orcamentoPendente : WorkOrderStatus.aberta,
+      diagnosis: _diagnosisController.text.trim().isNotEmpty ? _diagnosisController.text.trim() : null,
+      currentBudget: initialBudget,
+      attachments: attachments,
+      createdAt: DateTime.now(),
+    );
+
+    final success = await ref.read(workOrdersControllerProvider.notifier).createWorkOrder(order);
+    setState(() => _isSubmitting = false);
+
+    if (!mounted) return;
+
+    if (success) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green),
+              SizedBox(width: 8),
+              Text('Ordem Aberta!'),
+            ],
+          ),
+          content: const Text(
+            'Ordem de Serviço gerada com sucesso!\nO histórico inicial foi registrado e o cliente poderá receber o comprovante.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                context.go('/work-orders');
+              },
+              child: const Text('Ver Ordens'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              onPressed: () {
+                Navigator.pop(ctx);
+                context.go('/dashboard');
+              },
+              child: const Text('Ir para o Início', style: TextStyle(color: Colors.white)),
+            ),
           ],
         ),
-        content: const Text(
-          'Ordem de Serviço OS-0105 gerada com sucesso!\nO cliente receberá o comprovante de recebimento.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.go('/work-orders');
-            },
-            child: const Text('Ver Ordens'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.go('/dashboard');
-            },
-            child: const Text('Ir para o Início', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erro ao salvar Ordem de Serviço.')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final customersState = ref.watch(customersControllerProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Abertura de OS Guiada'),
@@ -164,13 +292,14 @@ class _NewWorkOrderScreenState extends ConsumerState<NewWorkOrderScreen> {
                 Expanded(
                   child: PrimaryButton(
                     text: isLastStep ? 'Concluir Abertura de OS' : 'Próximo Passo',
-                    onPressed: details.onStepContinue,
+                    isLoading: _isSubmitting,
+                    onPressed: _isSubmitting ? null : details.onStepContinue,
                   ),
                 ),
                 if (_currentStep > 0) ...[
                   const SizedBox(width: 12),
                   OutlinedButton(
-                    onPressed: details.onStepCancel,
+                    onPressed: _isSubmitting ? null : details.onStepCancel,
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -191,7 +320,41 @@ class _NewWorkOrderScreenState extends ConsumerState<NewWorkOrderScreen> {
             content: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Dados do Cliente', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const Text('Vincular Cliente Cadastrado', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                if (customersState.customers.isNotEmpty) ...[
+                  DropdownButtonFormField<Customer>(
+                    initialValue: _selectedCustomer,
+                    decoration: const InputDecoration(
+                      labelText: 'Selecionar Cliente Existente',
+                      prefixIcon: Icon(Icons.people_alt_outlined),
+                    ),
+                    items: [
+                      const DropdownMenuItem<Customer>(
+                        value: null,
+                        child: Text('Novo Cliente (Cadastrar no ato)'),
+                      ),
+                      ...customersState.customers.map(
+                        (c) => DropdownMenuItem(
+                          value: c,
+                          child: Text('${c.name} - ${c.phone}'),
+                        ),
+                      ),
+                    ],
+                    onChanged: (c) {
+                      setState(() {
+                        _selectedCustomer = c;
+                        if (c != null) {
+                          _clientNameController.text = c.name;
+                          _clientPhoneController.text = c.phone;
+                          if (c.cpfCnpj != null) _clientCpfController.text = c.cpfCnpj!;
+                        }
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                const Text('Dados do Cliente', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 12),
                 CustomTextField(
                   controller: _clientNameController,
@@ -442,8 +605,14 @@ class _NewWorkOrderScreenState extends ConsumerState<NewWorkOrderScreen> {
                   children: [
                     const Text('Resumo da Abertura', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     const Divider(height: 20),
-                    _SummaryRow(label: 'Cliente', value: _clientNameController.text.isNotEmpty ? _clientNameController.text : 'Cliente Balcão'),
-                    _SummaryRow(label: 'Telefone', value: _clientPhoneController.text.isNotEmpty ? _clientPhoneController.text : 'Não informado'),
+                    _SummaryRow(
+                      label: 'Cliente',
+                      value: _clientNameController.text.isNotEmpty ? _clientNameController.text : 'Cliente Balcão',
+                    ),
+                    _SummaryRow(
+                      label: 'Telefone',
+                      value: _clientPhoneController.text.isNotEmpty ? _clientPhoneController.text : 'Não informado',
+                    ),
                     _SummaryRow(label: 'Aparelho', value: '$_selectedBrand ${_modelController.text}'),
                     _SummaryRow(label: 'Defeito', value: _reportedDefectController.text),
                     _SummaryRow(label: 'Prioridade', value: _priority),
