@@ -23,6 +23,7 @@ import '../../features/suppliers/data/models/supplier.dart';
 import '../../features/suppliers/presentation/supplier_form_screen.dart';
 import '../../features/suppliers/presentation/suppliers_screen.dart';
 import '../../features/work_orders/presentation/new_work_order_screen.dart';
+import '../../features/work_orders/presentation/work_order_detail_screen.dart';
 import '../../features/work_orders/presentation/work_orders_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -70,6 +71,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'new',
             builder: (context, state) => const NewWorkOrderScreen(),
+          ),
+          GoRoute(
+            path: 'detail',
+            builder: (context, state) => WorkOrderDetailScreen(
+              workOrderId: (state.extra as String?) ?? '',
+            ),
           ),
         ],
       ),
