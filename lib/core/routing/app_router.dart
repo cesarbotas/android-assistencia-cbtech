@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/auth_controller.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/select_tenant_screen.dart';
+import '../../features/auth/presentation/subscription_locked_screen.dart';
 import '../../features/customers/data/models/customer.dart';
 import '../../features/customers/presentation/customer_form_screen.dart';
 import '../../features/customers/presentation/customers_screen.dart';
@@ -34,6 +35,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     redirect: (BuildContext context, GoRouterState state) {
       final isLoggingIn = state.matchedLocation == '/login';
       final isSelectingTenant = state.matchedLocation == '/select-tenant';
+      final isSubscriptionLocked = state.matchedLocation == '/subscription-locked';
 
       if (authState.status == AuthStatus.unauthenticated) {
         return isLoggingIn ? null : '/login';
@@ -44,7 +46,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (authState.status == AuthStatus.authenticated) {
-        if (isLoggingIn || isSelectingTenant) {
+        if (!authState.isSubscriptionActive) {
+          return isSubscriptionLocked ? null : '/subscription-locked';
+        }
+        if (isLoggingIn || isSelectingTenant || isSubscriptionLocked) {
           return '/dashboard';
         }
       }
@@ -59,6 +64,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/select-tenant',
         builder: (context, state) => const SelectTenantScreen(),
+      ),
+      GoRoute(
+        path: '/subscription-locked',
+        builder: (context, state) => const SubscriptionLockedScreen(),
       ),
       GoRoute(
         path: '/dashboard',
