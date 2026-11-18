@@ -1,98 +1,178 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/app_drawer.dart';
+import '../data/models/financial_transaction.dart';
+import 'finances_controller.dart';
+import 'transaction_form_screen.dart';
 
-class FinancesScreen extends StatelessWidget {
+class FinancesScreen extends ConsumerStatefulWidget {
   const FinancesScreen({super.key});
 
   @override
+  ConsumerState<FinancesScreen> createState() => _FinancesScreenState();
+}
+
+class _FinancesScreenState extends ConsumerState<FinancesScreen> {
+  final _currencyFormat = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+  final _dateFormat = DateFormat('dd/MM/yyyy HH:mm');
+
+  @override
   Widget build(BuildContext context) {
-    final transactions = [
-      {'title': 'Pagamento OS-0101 (Rodrigo M.)', 'type': 'Entrada', 'method': 'PIX', 'value': '+ R\$ 150,00', 'date': 'Hoje, 16:45'},
-      {'title': 'Adiantamento OS-0104 (Mariana S.)', 'type': 'Entrada', 'method': 'Cartão Crédito', 'value': '+ R\$ 300,00', 'date': 'Hoje, 14:35'},
-      {'title': 'Compra de Peças - Fornecedor TotalCell', 'type': 'Saída', 'method': 'Boleto', 'value': '- R\$ 1.250,00', 'date': 'Ontem, 11:20'},
-      {'title': 'Pagamento OS-0099 (Ana Paula)', 'type': 'Entrada', 'method': 'Dinheiro', 'value': '+ R\$ 280,00', 'date': '15/11/2026'},
-    ];
+    final state = ref.watch(financesControllerProvider);
+    final controller = ref.read(financesControllerProvider.notifier);
+    final transactions = state.filteredTransactions;
 
     return Scaffold(
       drawer: const AppDrawer(),
       appBar: AppBar(
-        title: const Text('Controle Financeiro'),
+        title: const Text('Controle Financeiro & Caixa'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Atualizar',
+            onPressed: () => controller.loadTransactions(),
+          ),
+        ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('Novo Lançamento'),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TransactionFormScreen()),
+          );
+        },
+      ),
+      body: Column(
         children: [
           // Card Balanço
-          Card(
-            color: AppColors.primary,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            child: const Padding(
-              padding: EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Saldo em Caixa (Mês Vigente)', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                  SizedBox(height: 6),
-                  Text(
-                    'R\$ 8.360,00',
-                    style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Entradas', style: TextStyle(color: Colors.white70, fontSize: 11)),
-                          Text('R\$ 12.480,00', style: TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Saídas / Peças', style: TextStyle(color: Colors.white70, fontSize: 11)),
-                          Text('R\$ 4.120,00', style: TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Card(
+              color: AppColors.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Saldo em Caixa Atual', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    const SizedBox(height: 6),
+                    Text(
+                      _currencyFormat.format(state.currentBalance),
+                      style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Entradas', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                            Text(_currencyFormat.format(state.totalIncome), style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Saídas / Despesas', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                            Text(_currencyFormat.format(state.totalExpense), style: const TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 20),
 
-          const Text('Últimas Movimentações', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
+          // Filtros por Tipo
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                FilterChip(
+                  label: const Text('Todas'),
+                  selected: state.filterType == null,
+                  onSelected: (_) => controller.setFilterType(null),
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  label: const Text('Entradas'),
+                  selected: state.filterType == TransactionType.income,
+                  onSelected: (_) => controller.setFilterType(TransactionType.income),
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  label: const Text('Saídas'),
+                  selected: state.filterType == TransactionType.expense,
+                  onSelected: (_) => controller.setFilterType(TransactionType.expense),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Divider(height: 1),
 
-          ...transactions.map((t) {
-            final isIncome = t['type'] == 'Entrada';
-            return Card(
-              margin: const EdgeInsets.only(bottom: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: isIncome ? Colors.green.shade50 : Colors.red.shade50,
-                  child: Icon(
-                    isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-                    color: isIncome ? Colors.green : Colors.red,
-                    size: 18,
-                  ),
-                ),
-                title: Text(t['title']!, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                subtitle: Text('${t['method']} • ${t['date']}', style: const TextStyle(fontSize: 11)),
-                trailing: Text(
-                  t['value']!,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: isIncome ? Colors.green.shade800 : Colors.red.shade800,
-                  ),
-                ),
-              ),
-            );
-          }),
+          // Lista de Transações
+          Expanded(
+            child: state.isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : transactions.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'Nenhuma transação financeira encontrada.',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: () => controller.loadTransactions(),
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: transactions.length,
+                          itemBuilder: (context, index) {
+                            final tx = transactions[index];
+                            final isIncome = tx.type.isIncome;
+
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: isIncome ? Colors.green.shade50 : Colors.red.shade50,
+                                  child: Icon(
+                                    isIncome ? Icons.arrow_downward : Icons.arrow_upward,
+                                    color: isIncome ? Colors.green : Colors.red,
+                                    size: 18,
+                                  ),
+                                ),
+                                title: Text(tx.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                                subtitle: Text(
+                                  '${tx.paymentMethod.label} • ${_dateFormat.format(tx.date)}${tx.referenceId != null ? ' (${tx.referenceId})' : ''}',
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                                trailing: Text(
+                                  '${isIncome ? '+' : '-'} ${_currencyFormat.format(tx.amount)}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: isIncome ? Colors.green.shade800 : Colors.red.shade800,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+          ),
         ],
       ),
     );

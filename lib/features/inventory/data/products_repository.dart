@@ -153,6 +153,16 @@ class ProductsRepository {
     }
   }
 
+  Future<void> updateProductStock(String id, int newStock) async {
+    try {
+      await _dio.patch('${ApiEndpoints.products}/$id/stock', data: {'stock': newStock});
+    } catch (_) {}
+    final idx = _localProducts.indexWhere((p) => p.id == id);
+    if (idx != -1) {
+      _localProducts[idx] = _localProducts[idx].copyWith(currentStock: newStock);
+    }
+  }
+
   Future<void> deleteProduct(String id) async {
     try {
       await _dio.delete('${ApiEndpoints.products}/$id');

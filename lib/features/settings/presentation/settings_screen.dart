@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/app_drawer.dart';
 import '../../auth/presentation/auth_controller.dart';
+import 'users_management_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -65,7 +66,12 @@ class SettingsScreen extends ConsumerWidget {
                   title: const Text('Gerenciamento de Usuários'),
                   subtitle: const Text('Atendentes, técnicos e administradores'),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const UsersManagementScreen()),
+                    );
+                  },
                 ),
                 const Divider(height: 1),
                 ListTile(

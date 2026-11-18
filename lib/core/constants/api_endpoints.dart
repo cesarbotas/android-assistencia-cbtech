@@ -19,6 +19,8 @@ class ApiEndpoints {
   static const String products = '/products';
   static const String purchases = '/purchases';
   static const String inventory = '/inventory';
+  static const String stockMovements = '/stock/movements';
+  static const String purchaseOrders = '/purchase-orders';
 
   // Serviços & Ordens de Serviço
   static const String services = '/services';
