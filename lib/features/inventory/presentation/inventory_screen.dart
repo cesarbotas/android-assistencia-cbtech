@@ -45,6 +45,16 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         title: const Text('Peças & Estoque'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.swap_vert),
+            tooltip: 'Extrato Kardex',
+            onPressed: () => context.push('/inventory/movements'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.local_shipping_outlined),
+            tooltip: 'Pedidos de Compra',
+            onPressed: () => context.push('/inventory/purchases'),
+          ),
+          IconButton(
             icon: Icon(
               state.lowStockOnly ? Icons.warning : Icons.warning_amber_outlined,
               color: state.lowStockOnly ? Colors.amberAccent : Colors.white,
@@ -235,6 +245,11 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                                           ),
                                         ],
                                       ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.swap_vert, color: AppColors.primary),
+                                      tooltip: 'Registrar Movimentação',
+                                      onPressed: () => context.push('/inventory/movements/new', extra: p),
                                     ),
                                   ],
                                 ),

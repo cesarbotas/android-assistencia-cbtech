@@ -5,11 +5,16 @@ import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/status_badge.dart';
+import '../../finances/data/models/financial_transaction.dart';
+import '../../finances/presentation/finances_controller.dart';
+import '../../finances/presentation/receipt_screen.dart';
 import '../../inventory/presentation/products_controller.dart';
 import '../../services/presentation/services_controller.dart';
 import '../data/models/budget.dart';
 import '../data/models/budget_item.dart';
 import '../data/models/work_order.dart';
+import '../data/models/work_order_status.dart';
+import 'work_order_document_screen.dart';
 import 'work_orders_controller.dart';
 
 class WorkOrderDetailScreen extends ConsumerStatefulWidget {
@@ -298,6 +303,93 @@ Acompanhe os detalhes da sua manutenção conosco!
     );
   }
 
+  void _showPaymentAndReceiptDialog(WorkOrder wo) {
+    PaymentMethod selectedMethod = PaymentMethod.pix;
+    final amountController = TextEditingController(text: wo.totalValue.toStringAsFixed(2).replaceAll('.', ','));
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.payment, color: Colors.green),
+              const SizedBox(width: 8),
+              Text('Receber ${wo.sequentialNumber}'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Cliente: ${wo.customerName}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text('Total da OS: ${_currency.format(wo.totalValue)}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              const Text('Forma de Pagamento:'),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<PaymentMethod>(
+                value: selectedMethod,
+                decoration: const InputDecoration(border: OutlineInputBorder()),
+                items: PaymentMethod.values.map((m) => DropdownMenuItem(value: m, child: Text(m.label))).toList(),
+                onChanged: (val) => setStateDialog(() => selectedMethod = val ?? PaymentMethod.pix),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                final amount = double.tryParse(amountController.text.replaceAll(',', '.')) ?? wo.totalValue;
+
+                await ref.read(financesControllerProvider.notifier).addTransaction(
+                      title: 'Pagamento ${wo.sequentialNumber} (${wo.customerName})',
+                      type: TransactionType.income,
+                      category: TransactionCategory.service,
+                      paymentMethod: selectedMethod,
+                      amount: amount,
+                      referenceType: 'work_order',
+                      referenceId: wo.sequentialNumber,
+                      notes: 'Quitação de Ordem de Serviço',
+                    );
+
+                if (wo.status != WorkOrderStatus.entregue) {
+                  await ref.read(workOrdersControllerProvider.notifier).updateStatus(
+                        wo.id,
+                        WorkOrderStatus.entregue,
+                        note: 'Pago via ${selectedMethod.label} e entregue ao cliente.',
+                      );
+                }
+
+                if (mounted) {
+                  final itemsSummary = wo.currentBudget?.items.map((i) => '• ${i.description} (${i.quantity}x)').join('\n') ?? 'Serviços técnicos gerais';
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ReceiptScreen(
+                        receiptNumber: 'REC-${wo.sequentialNumber}',
+                        customerName: wo.customerName,
+                        customerPhone: wo.customerPhone,
+                        deviceDescription: '${wo.deviceBrand} ${wo.deviceModel}',
+                        amount: amount,
+                        paymentMethod: selectedMethod.label,
+                        date: DateTime.now(),
+                        itemsSummary: itemsSummary,
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Confirmar & Emitir Recibo', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final woState = ref.watch(workOrdersControllerProvider);
@@ -325,16 +417,22 @@ Acompanhe os detalhes da sua manutenção conosco!
           title: Text(wo.sequentialNumber),
           actions: [
             IconButton(
+              icon: const Icon(Icons.payment, color: Colors.white),
+              tooltip: 'Receber & Emitir Recibo',
+              onPressed: () => _showPaymentAndReceiptDialog(wo),
+            ),
+            IconButton(
               icon: const Icon(Icons.share, color: Colors.white),
               tooltip: 'WhatsApp',
               onPressed: () => _shareViaWhatsApp(wo),
             ),
             IconButton(
               icon: const Icon(Icons.print_outlined),
-              tooltip: 'Imprimir / PDF',
+              tooltip: 'Documentos e Termos (PDF)',
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Comprovante da ${wo.sequentialNumber} pronto para impressão.')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => WorkOrderDocumentScreen(workOrder: wo)),
                 );
               },
             ),
