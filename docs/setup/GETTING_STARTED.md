@@ -24,8 +24,8 @@ Serviços disponibilizados:
 cd backend/src/CBTech.Api
 dotnet run
 ```
-A API iniciará por padrão em `http://localhost:5000` ou `https://localhost:5001`.
-Acesse a documentação Swagger em: `http://localhost:5000/swagger`.
+A API iniciará por padrão em `http://localhost:5176` ou `https://localhost:5001`.
+Acesse a documentação Swagger em: `http://localhost:5176/swagger`.
 
 ---
 

@@ -70,21 +70,30 @@ Este documento especifica os endpoints, contratos de payload (JSON), códigos de
 
 ## 3. Módulo de Clientes (`/api/v1/customers`)
 
-- **GET `/api/v1/customers?search=query&page=1&pageSize=20`**
-- **POST `/api/v1/customers`**
+- **GET `/api/v1/clientes?search=query&page=1&pageSize=20`**
+- **POST `/api/v1/clientes`**
   ```json
-  {
-    "name": "Rodrigo Mendes",
-    "phone": "(11) 99999-1234",
-    "whatsapp": "(11) 99999-1234",
-    "email": "rodrigo@email.com",
-    "cpfCnpj": "123.456.789-00",
-    "address": "Rua das Flores, 100 - São Paulo/SP",
-    "notes": "Cliente preferencial"
-  }
+{
+"id": "123e4567-e89b-12d3-a456-426614174000",
+"nome": "string",
+"email": "string",
+"telefone": null,
+"endereco": {
+"id": "123e4567-e89b-12d3-a456-426614174000",
+"clienteId": "123e4567-e89b-12d3-a456-426614174000",
+"logradouro": "string",
+"numero": "string",
+"complemento": null,
+"bairro": "string",
+"cidade": "string",
+"estado": "string",
+"cep": "string"
+},
+"criadoEm": "2026-11-20T17:16:52.341Z"
+}
   ```
-- **PUT `/api/v1/customers/{id}`**
-- **DELETE `/api/v1/customers/{id}`**
+- **PUT `/api/v1/clientes/{id}`**
+- **DELETE `/api/v1/clientes/{id}`**
 
 ---
 

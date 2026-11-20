@@ -26,7 +26,7 @@ Crie uma Solution em .NET 10 dividida nos seguintes projetos (Clean Architecture
 2. **CBTech.Application**: Casos de uso divididos por módulos verticais:
    - `Modules/Auth` (Login, Seleção de Tenant, Refresh Token)
    - `Modules/Tenants` (Gestão de Assistências e Assinaturas/Kill-Switch)
-   - `Modules/Customers` (Clientes PF/PJ)
+   - `Modules/Clientes` (Clientes PF/PJ)
    - `Modules/Devices` (Aparelhos, Marcas, IMEI, Senhas)
    - `Modules/Suppliers` (Fornecedores de Peças)
    - `Modules/Inventory` (Produtos, SKU, Estoque Mínimo, Kardex, Pedidos de Compra)

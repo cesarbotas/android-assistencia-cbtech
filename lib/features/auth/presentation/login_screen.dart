@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/config/environment_config.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/primary_button.dart';
 import 'auth_controller.dart';
+import 'environment_selector_dialog.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -189,6 +191,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     text: 'Acessar Plataforma',
                     isLoading: authState.isLoading,
                     onPressed: _submit,
+                  ),
+                  const SizedBox(height: 24),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final currentEnv = ref.watch(environmentNotifierProvider);
+                      return Center(
+                        child: TextButton.icon(
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.textSecondary,
+                          ),
+                          icon: const Icon(Icons.dns_outlined, size: 16),
+                          label: Text('Ambiente: ${currentEnv.label}'),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (_) => const EnvironmentSelectorDialog(),
+                            );
+                          },
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),

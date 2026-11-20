@@ -57,16 +57,16 @@ Todas as falhas retornam JSON no padrão `application/problem+json`:
 
 ## 4. Cadastros Base
 
-### 4.1. Clientes (`/api/v1/customers`)
-- `GET /api/v1/customers?search={query}&page={page}&pageSize={size}`
+### 4.1. Clientes (`/api/v1/clientes`)
+- `GET /api/v1/clientes?search={query}&page={page}&pageSize={size}`
   - Retorna lista paginada e filtrada de clientes do tenant.
-- `GET /api/v1/customers/{id}`
+- `GET /api/v1/clientes/{id}`
   - Retorna dados detalhados do cliente e histórico de ordens associadas.
-- `POST /api/v1/customers`
+- `POST /api/v1/clientes`
   - Cadastra novo cliente (Nome, Telefone, WhatsApp, E-mail, CPF/CNPJ, Endereço, Observações).
-- `PUT /api/v1/customers/{id}`
+- `PUT /api/v1/clientes/{id}`
   - Atualiza cadastro do cliente.
-- `DELETE /api/v1/customers/{id}`
+- `DELETE /api/v1/clientes/{id}`
   - Exclusão lógica ou bloqueio de cliente (se possuir histórico de OS).
 
 ### 4.2. Aparelhos e Catálogo (`/api/v1/devices` & `/api/v1/brands`)

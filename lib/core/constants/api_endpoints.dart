@@ -1,15 +1,15 @@
 class ApiEndpoints {
-  static const String baseUrl = 'http://10.0.2.2:5000/api/v1'; // Emulador Android -> localhost
+  static const String baseUrl = 'http://localhost:5176/api/v1'; // Emulador Android -> localhost
 
   // Autenticação & Tenants
   static const String login = '/auth/login';
   static const String selectTenant = '/auth/select-tenant';
-  static const String refreshToken = '/auth/refresh-token';
+  static const String refreshToken = '/auth/refresh';
   static const String logout = '/auth/logout';
   static const String registerTenant = '/tenants';
 
   // Clientes & Aparelhos
-  static const String customers = '/customers';
+  static const String customers = '/clientes';
   static const String devices = '/devices';
   static const String brands = '/brands';
   static const String models = '/models';
