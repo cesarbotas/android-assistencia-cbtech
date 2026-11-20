@@ -69,10 +69,10 @@ Todas as falhas retornam JSON no padrão `application/problem+json`:
 - `DELETE /api/v1/clientes/{id}`
   - Exclusão lógica ou bloqueio de cliente (se possuir histórico de OS).
 
-### 4.2. Aparelhos e Catálogo (`/api/v1/devices` & `/api/v1/brands`)
-- `GET /api/v1/brands`
+### 4.2. Aparelhos e Catálogo (`/api/v1/devices` & `/api/v1/marcas`)
+- `GET /api/v1/marcas`
   - Lista marcas cadastradas (Apple, Samsung, Motorola, Xiaomi, etc.).
-- `GET /api/v1/devices?customerId={id}&search={query}`
+- `GET /api/v1/devices?clienteId={id}&search={query}`
   - Lista aparelhos vinculados a clientes (Marca, Modelo, Cor, IMEI 1/2, Serial, Senha de Tela).
 - `POST /api/v1/devices`
   - Cadastra aparelho vinculado a um cliente.

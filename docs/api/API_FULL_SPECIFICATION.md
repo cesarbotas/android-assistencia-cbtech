@@ -97,9 +97,9 @@ Este documento especifica os endpoints, contratos de payload (JSON), códigos de
 
 ---
 
-## 4. Módulo de Aparelhos (`/api/v1/devices` & `/api/v1/brands`)
+## 4. Módulo de Aparelhos (`/api/v1/devices` & `/api/v1/marcas`)
 
-- **GET `/api/v1/brands`**
+- **GET `/api/v1/marcas`**
 - **GET `/api/v1/devices?customerId={id}`**
 - **POST `/api/v1/devices`**
   ```json
