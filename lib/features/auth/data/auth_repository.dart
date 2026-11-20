@@ -24,9 +24,10 @@ class AuthRepository {
     required String password,
   }) async {
     try {
+      // Backend expects 'senha' instead of 'password' per LoginRequest schema
       final response = await _dio.post(
         ApiEndpoints.login,
-        data: {'email': email, 'password': password},
+        data: {'email': email, 'senha': password},
       );
 
       final authResponse = AuthResponse.fromJson(response.data as Map<String, dynamic>);
@@ -41,7 +42,7 @@ class AuthRepository {
         return _fallbackMockLogin(email, password);
       }
 
-      final message = e.response?.data?['detail'] ?? 'Falha ao autenticar. Verifique seus dados.';
+      final message = e.response?.data?['detail'] ?? e.response?.data?['title'] ?? 'Falha ao autenticar. Verifique seus dados.';
       throw ApiException(
         message: message.toString(),
         statusCode: e.response?.statusCode,
@@ -64,7 +65,10 @@ class AuthRepository {
 
   Future<void> logout() async {
     try {
-      await _dio.post(ApiEndpoints.logout);
+      await _dio.post(
+        ApiEndpoints.logout,
+        data: {'refreshToken': await _storage.getRefreshToken() ?? ''},
+      );
     } catch (_) {
       // Ignora erro de rede no logout
     } finally {

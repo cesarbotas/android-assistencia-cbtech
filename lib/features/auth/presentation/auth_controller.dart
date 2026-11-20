@@ -15,6 +15,7 @@ class AuthState {
   final String? activeTenantId;
   final String? activeTenantName;
   final String? userRole;
+  final bool isSubscriptionActive;
   final List<TenantInfo> availableTenants;
 
   AuthState({
@@ -27,6 +28,7 @@ class AuthState {
     this.activeTenantId,
     this.activeTenantName,
     this.userRole,
+    this.isSubscriptionActive = true,
     this.availableTenants = const [],
   });
 
@@ -40,6 +42,7 @@ class AuthState {
     String? activeTenantId,
     String? activeTenantName,
     String? userRole,
+    bool? isSubscriptionActive,
     List<TenantInfo>? availableTenants,
   }) {
     return AuthState(
@@ -52,6 +55,7 @@ class AuthState {
       activeTenantId: activeTenantId ?? this.activeTenantId,
       activeTenantName: activeTenantName ?? this.activeTenantName,
       userRole: userRole ?? this.userRole,
+      isSubscriptionActive: isSubscriptionActive ?? this.isSubscriptionActive,
       availableTenants: availableTenants ?? this.availableTenants,
     );
   }
@@ -77,6 +81,8 @@ class AuthController extends StateNotifier<AuthState> {
     final userData = await _storage.getUserData();
 
     if (tenantId != null && userData['id'] != null) {
+      // Simulate check for subscription status (e.g. inactive if tenantId contains 'expired')
+      final isActive = !tenantId.contains('expired');
       state = state.copyWith(
         status: AuthStatus.authenticated,
         activeTenantId: tenantId,
@@ -85,6 +91,7 @@ class AuthController extends StateNotifier<AuthState> {
         userName: userData['name'],
         userEmail: userData['email'],
         userRole: userData['role'],
+        isSubscriptionActive: isActive,
       );
     } else {
       state = state.copyWith(status: AuthStatus.unauthenticated);
@@ -108,6 +115,7 @@ class AuthController extends StateNotifier<AuthState> {
         );
         return true;
       } else {
+        final isActive = !(response.activeTenantId ?? '').contains('expired');
         state = state.copyWith(
           status: AuthStatus.authenticated,
           isLoading: false,
@@ -117,6 +125,7 @@ class AuthController extends StateNotifier<AuthState> {
           userName: response.userName,
           userEmail: response.userEmail,
           userRole: response.userRole,
+          isSubscriptionActive: isActive,
         );
         return true;
       }
@@ -143,6 +152,7 @@ class AuthController extends StateNotifier<AuthState> {
       activeTenantId: tenant.id,
       activeTenantName: tenant.nome,
       userRole: tenant.perfil,
+      isSubscriptionActive: tenant.isSubscriptionActive,
     );
   }
 

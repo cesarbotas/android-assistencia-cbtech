@@ -18,100 +18,67 @@ class CustomersRepository {
   final List<Customer> _localCustomers = [
     Customer(
       id: 'c1111111-1111-1111-1111-111111111111',
-      tenantId: '11111111-1111-1111-1111-111111111111',
       name: 'Mariana Souza',
-      cpfCnpj: '123.456.789-01',
       phone: '(11) 99876-5432',
-      whatsapp: '(11) 99876-5432',
       email: 'mariana.souza@gmail.com',
-      street: 'Av. Paulista',
-      number: '1000',
-      neighborhood: 'Bela Vista',
-      city: 'São Paulo',
-      state: 'SP',
-      zipCode: '01310-100',
-      notes: 'Cliente preferencial. Sempre solicita peças originais.',
-      isActive: true,
+      endereco: Address(logradouro: 'Av. Paulista', numero: '1000', bairro: 'Bela Vista', cidade: 'São Paulo', estado: 'SP', cep: '01310-100'),
       createdAt: DateTime.now().subtract(const Duration(days: 45)),
-      devicesCount: 2,
     ),
     Customer(
       id: 'c2222222-2222-2222-2222-222222222222',
-      tenantId: '11111111-1111-1111-1111-111111111111',
       name: 'Carlos Eduardo Silva',
-      cpfCnpj: '234.567.890-12',
       phone: '(11) 98888-7777',
-      whatsapp: '(11) 98888-7777',
       email: 'carlos.edu@outlook.com',
-      street: 'Rua Augusta',
-      number: '450',
-      neighborhood: 'Consolação',
-      city: 'São Paulo',
-      state: 'SP',
-      zipCode: '01304-000',
-      notes: 'Solicitou urgência no atendimento da linha Samsung.',
-      isActive: true,
+      endereco: Address(logradouro: 'Rua Augusta', numero: '450', bairro: 'Consolação', cidade: 'São Paulo', estado: 'SP', cep: '01304-000'),
       createdAt: DateTime.now().subtract(const Duration(days: 30)),
-      devicesCount: 1,
     ),
     Customer(
       id: 'c3333333-3333-3333-3333-333333333333',
-      tenantId: '11111111-1111-1111-1111-111111111111',
       name: 'Fernanda Lima',
-      cpfCnpj: '345.678.901-23',
       phone: '(11) 97777-6666',
-      whatsapp: '(11) 97777-6666',
       email: 'fernanda.lima@hotmail.com',
-      street: 'Rua Vergueiro',
-      number: '2020',
-      neighborhood: 'Vila Mariana',
-      city: 'São Paulo',
-      state: 'SP',
-      zipCode: '04101-000',
-      notes: 'Possui múltiplos aparelhos corporativos na família.',
-      isActive: true,
+      endereco: Address(logradouro: 'Rua Vergueiro', numero: '2020', bairro: 'Vila Mariana', cidade: 'São Paulo', estado: 'SP', cep: '04101-000'),
       createdAt: DateTime.now().subtract(const Duration(days: 15)),
-      devicesCount: 3,
     ),
     Customer(
       id: 'c4444444-4444-4444-4444-444444444444',
-      tenantId: '11111111-1111-1111-1111-111111111111',
       name: 'Rodrigo Menezes',
-      cpfCnpj: '456.789.012-34',
       phone: '(11) 96666-5555',
-      whatsapp: '(11) 96666-5555',
       email: 'rodrigo.m@gmail.com',
-      street: 'Rua Domingos de Morais',
-      number: '880',
-      neighborhood: 'Vila Mariana',
-      city: 'São Paulo',
-      state: 'SP',
-      zipCode: '04010-000',
-      isActive: true,
+      endereco: Address(logradouro: 'Rua Domingos de Morais', numero: '880', bairro: 'Vila Mariana', cidade: 'São Paulo', estado: 'SP', cep: '04010-000'),
       createdAt: DateTime.now().subtract(const Duration(days: 5)),
-      devicesCount: 1,
     ),
   ];
 
   CustomersRepository(this._dio);
 
-  Future<List<Customer>> getCustomers({String? search, bool? activeOnly}) async {
+  Future<List<Customer>> getCustomers({String? search, int pagina = 1, int tamanho = 10, bool? activeOnly}) async {
     try {
-      final Map<String, dynamic> params = {};
-      if (search != null && search.isNotEmpty) params['search'] = search;
-      if (activeOnly != null) params['activeOnly'] = activeOnly;
+      final Map<String, dynamic> params = {
+        'Pagina': pagina,
+        'Tamanho': tamanho,
+      };
+      if (search != null && search.isNotEmpty) params['Search'] = search;
 
       final response = await _dio.get(
         ApiEndpoints.customers,
         queryParameters: params,
       );
-      final list = (response.data as List<dynamic>)
-          .map((item) => Customer.fromJson(item as Map<String, dynamic>))
-          .toList();
-      return list;
+
+      final data = response.data;
+      List<dynamic> items = [];
+      if (data is List) {
+        items = data;
+      } else if (data is Map && data['items'] != null) {
+        items = data['items'] as List<dynamic>;
+      } else if (data is Map && data['data'] != null) {
+        items = data['data'] as List<dynamic>;
+      }
+
+      return items.map((item) => Customer.fromJson(item as Map<String, dynamic>)).toList();
     } catch (_) {
-      // Fallback local
-      return _localCustomers.where((c) {
+      // Fallback local com paginação em memória
+      final filtered = _localCustomers.where((c) {
         if (activeOnly == true && !c.isActive) return false;
         if (search != null && search.isNotEmpty) {
           final q = search.toLowerCase();
@@ -122,6 +89,11 @@ class CustomersRepository {
         }
         return true;
       }).toList();
+
+      final startIndex = (pagina - 1) * tamanho;
+      if (startIndex >= filtered.length) return [];
+      final endIndex = (startIndex + tamanho < filtered.length) ? startIndex + tamanho : filtered.length;
+      return filtered.sublist(startIndex, endIndex);
     }
   }
 
