@@ -58,7 +58,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
         foregroundColor: Colors.white,
         icon: const Icon(Icons.person_add),
         label: const Text('Novo Cliente', style: TextStyle(fontWeight: FontWeight.bold)),
-        onPressed: () => context.go('/customers/new'),
+        onPressed: () => context.push('/customers/new'),
       ),
       body: Column(
         children: [
@@ -145,7 +145,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(12),
                                 onTap: () {
-                                  context.go('/customers/edit', extra: c);
+                                  context.push('/customers/edit', extra: c);
                                 },
                                 child: Padding(
                                   padding: const EdgeInsets.all(14),

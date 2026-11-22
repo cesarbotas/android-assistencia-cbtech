@@ -24,12 +24,18 @@ class CustomTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            color: isDark ? Colors.white70 : Colors.black87,
+          ),
         ),
         const SizedBox(height: 6),
         TextFormField(
@@ -37,9 +43,11 @@ class CustomTextField extends StatelessWidget {
           obscureText: obscureText,
           keyboardType: keyboardType,
           validator: validator,
+          style: TextStyle(color: isDark ? Colors.white : Colors.black87),
           decoration: InputDecoration(
             hintText: hint,
-            prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
+            hintStyle: TextStyle(color: isDark ? Colors.grey.shade500 : Colors.grey.shade400),
+            prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: isDark ? Colors.white70 : Colors.grey.shade700) : null,
             suffixIcon: suffixIcon,
           ),
         ),

@@ -46,14 +46,14 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
     _cpfCnpjController = TextEditingController(text: c?.cpfCnpj ?? '');
     _phoneController = TextEditingController(text: c?.phone ?? '');
     _whatsappController = TextEditingController(text: c?.whatsapp ?? '');
-    _emailController = TextEditingController(text: c?.email ?? 'cliente@cbtech.com');
+    _emailController = TextEditingController(text: c?.email ?? '');
     _zipCodeController = TextEditingController(text: c?.zipCode ?? '');
     _streetController = TextEditingController(text: c?.street ?? '');
     _numberController = TextEditingController(text: c?.number ?? '');
     _complementController = TextEditingController(text: c?.endereco?.complemento ?? '');
     _neighborhoodController = TextEditingController(text: c?.neighborhood ?? '');
-    _cityController = TextEditingController(text: c?.city ?? 'São Paulo');
-    _stateController = TextEditingController(text: c?.state ?? 'SP');
+    _cityController = TextEditingController(text: c?.city ?? '');
+    _stateController = TextEditingController(text: c?.state ?? '');
     _notesController = TextEditingController(text: c?.notes ?? '');
     _isActive = c?.isActive ?? true;
   }
@@ -200,233 +200,220 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
             ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Identificação',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                controller: _nameController,
-                label: 'Nome Completo *',
-                hint: 'Ex: Roberto de Oliveira',
-                prefixIcon: Icons.person_outline,
-                validator: (val) =>
-                    (val == null || val.trim().isEmpty) ? 'Nome é obrigatório' : null,
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomTextField(
-                      controller: _phoneController,
-                      label: 'Telefone Principal *',
-                      hint: '(11) 98765-4321',
-                      prefixIcon: Icons.phone_outlined,
-                      keyboardType: TextInputType.phone,
-                      validator: (val) =>
-                          (val == null || val.trim().isEmpty) ? 'Telefone é obrigatório' : null,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: CustomTextField(
-                      controller: _whatsappController,
-                      label: 'WhatsApp (Opcional)',
-                      hint: '(11) 98765-4321',
-                      prefixIcon: Icons.chat_bubble_outline,
-                      keyboardType: TextInputType.phone,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomTextField(
-                      controller: _cpfCnpjController,
-                      label: 'CPF ou CNPJ',
-                      hint: '000.000.000-00',
-                      prefixIcon: Icons.badge_outlined,
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: CustomTextField(
-                      controller: _emailController,
-                      label: 'E-mail',
-                      hint: 'cliente@email.com',
-                      prefixIcon: Icons.email_outlined,
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              const Text(
-                'Endereço',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
-              ),
-              const SizedBox(height: 12),
-
-              // CEP como primeiro campo para consulta ViaCEP
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomTextField(
-                      controller: _zipCodeController,
-                      label: 'CEP *',
-                      hint: '00000-000',
-                      prefixIcon: Icons.map_outlined,
-                      keyboardType: TextInputType.number,
-                      validator: (val) => (val == null || val.trim().isEmpty) ? 'CEP é obrigatório' : null,
-                      suffixIcon: _isLoadingCep
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                          : null,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  SizedBox(
-                    height: 50,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Identificação',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+                ),
+                const SizedBox(height: 12),
+                CustomTextField(
+                  controller: _nameController,
+                  label: 'Nome Completo *',
+                  hint: 'Ex: Roberto de Oliveira',
+                  prefixIcon: Icons.person_outline,
+                  validator: (val) =>
+                      (val == null || val.trim().isEmpty) ? 'Nome é obrigatório' : null,
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: CustomTextField(
+                        controller: _phoneController,
+                        label: 'Telefone Principal *',
+                        hint: '(11) 98765-4321',
+                        prefixIcon: Icons.phone_outlined,
+                        keyboardType: TextInputType.phone,
+                        validator: (val) =>
+                            (val == null || val.trim().isEmpty) ? 'Telefone é obrigatório' : null,
                       ),
-                      icon: const Icon(Icons.search, size: 18),
-                      label: const Text('Buscar CEP'),
-                      onPressed: () => _fetchCep(_zipCodeController.text),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-
-              Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: CustomTextField(
-                      controller: _streetController,
-                      label: 'Logradouro *',
-                      hint: 'Rua, Avenida...',
-                      validator: (val) => (val == null || val.trim().isEmpty) ? 'Logradouro obrigatório' : null,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: CustomTextField(
+                        controller: _whatsappController,
+                        label: 'WhatsApp (Opcional)',
+                        hint: '(11) 98765-4321',
+                        prefixIcon: Icons.chat_bubble_outline,
+                        keyboardType: TextInputType.phone,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 1,
-                    child: CustomTextField(
-                      controller: _numberController,
-                      label: 'Número *',
-                      hint: '123',
-                      validator: (val) => (val == null || val.trim().isEmpty) ? 'Obrigatório' : null,
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: CustomTextField(
+                        controller: _cpfCnpjController,
+                        label: 'CPF ou CNPJ',
+                        hint: '000.000.000-00',
+                        prefixIcon: Icons.badge_outlined,
+                        keyboardType: TextInputType.number,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-
-              CustomTextField(
-                controller: _complementController,
-                label: 'Complemento (Opcional)',
-                hint: 'Apto 42, Bloco B, Fundos...',
-              ),
-              const SizedBox(height: 14),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomTextField(
-                      controller: _neighborhoodController,
-                      label: 'Bairro *',
-                      hint: 'Centro...',
-                      validator: (val) => (val == null || val.trim().isEmpty) ? 'Bairro obrigatório' : null,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: CustomTextField(
+                        controller: _emailController,
+                        label: 'E-mail',
+                        hint: 'cliente@email.com',
+                        prefixIcon: Icons.email_outlined,
+                        keyboardType: TextInputType.emailAddress,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
+                  ],
+                ),
+                const SizedBox(height: 24),
 
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: CustomTextField(
-                      controller: _cityController,
-                      label: 'Cidade *',
-                      hint: 'São Paulo',
-                      validator: (val) => (val == null || val.trim().isEmpty) ? 'Cidade obrigatória' : null,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 1,
-                    child: CustomTextField(
-                      controller: _stateController,
-                      label: 'UF *',
-                      hint: 'SP',
-                      validator: (val) => (val == null || val.trim().isEmpty) ? 'UF obrigatória' : null,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
+                const Text(
+                  'Endereço',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+                ),
+                const SizedBox(height: 12),
 
-              const Text(
-                'Observações & Status',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
-              ),
-              const SizedBox(height: 12),
-              CustomTextField(
-                controller: _notesController,
-                label: 'Observações Internas',
-                hint: 'Preferências de peças, histórico...',
-              ),
-              const SizedBox(height: 14),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Cliente Ativo', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Clientes inativos não aparecem na abertura de novas ordens'),
-                value: _isActive,
-                activeThumbColor: AppColors.primary,
-                onChanged: (val) => setState(() => _isActive = val),
-              ),
-              const SizedBox(height: 28),
-
-              PrimaryButton(
-                text: isEditing ? 'Salvar Alterações' : 'Cadastrar Cliente',
-                isLoading: _isSaving,
-                onPressed: _save,
-              ),
-
-              if (isEditing && isAdminOrManager) ...[
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    icon: const Icon(Icons.delete_outline),
-                    label: const Text('Excluir Cliente', style: TextStyle(fontWeight: FontWeight.bold)),
-                    onPressed: _confirmDelete,
+                // CEP como primeiro campo para consulta ViaCEP com botão de busca no suffixIcon
+                CustomTextField(
+                  controller: _zipCodeController,
+                  label: 'CEP *',
+                  hint: '00000-000',
+                  prefixIcon: Icons.map_outlined,
+                  keyboardType: TextInputType.number,
+                  validator: (val) => (val == null || val.trim().isEmpty) ? 'CEP é obrigatório' : null,
+                  suffixIcon: IconButton(
+                    icon: _isLoadingCep
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.search, color: AppColors.primary),
+                    tooltip: 'Buscar CEP',
+                    onPressed: () => _fetchCep(_zipCodeController.text),
                   ),
                 ),
+                const SizedBox(height: 14),
+
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: CustomTextField(
+                        controller: _streetController,
+                        label: 'Logradouro *',
+                        hint: 'Rua, Avenida...',
+                        validator: (val) => (val == null || val.trim().isEmpty) ? 'Logradouro obrigatório' : null,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 1,
+                      child: CustomTextField(
+                        controller: _numberController,
+                        label: 'Número *',
+                        hint: '123',
+                        validator: (val) => (val == null || val.trim().isEmpty) ? 'Obrigatório' : null,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                CustomTextField(
+                  controller: _complementController,
+                  label: 'Complemento (Opcional)',
+                  hint: 'Apto 42, Bloco B, Fundos...',
+                ),
+                const SizedBox(height: 14),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: CustomTextField(
+                        controller: _neighborhoodController,
+                        label: 'Bairro *',
+                        hint: 'Centro...',
+                        validator: (val) => (val == null || val.trim().isEmpty) ? 'Bairro obrigatório' : null,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: CustomTextField(
+                        controller: _cityController,
+                        label: 'Cidade *',
+                        hint: 'São Paulo',
+                        validator: (val) => (val == null || val.trim().isEmpty) ? 'Cidade obrigatória' : null,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 1,
+                      child: CustomTextField(
+                        controller: _stateController,
+                        label: 'UF *',
+                        hint: 'SP',
+                        validator: (val) => (val == null || val.trim().isEmpty) ? 'UF obrigatória' : null,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                const Text(
+                  'Observações & Status',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+                ),
+                const SizedBox(height: 12),
+                CustomTextField(
+                  controller: _notesController,
+                  label: 'Observações Internas',
+                  hint: 'Preferências de peças, histórico...',
+                ),
+                const SizedBox(height: 14),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Cliente Ativo', style: TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Clientes inativos não aparecem na abertura de novas ordens'),
+                  value: _isActive,
+                  activeThumbColor: AppColors.primary,
+                  onChanged: (val) => setState(() => _isActive = val),
+                ),
+                const SizedBox(height: 28),
+
+                PrimaryButton(
+                  text: isEditing ? 'Salvar Alterações' : 'Cadastrar Cliente',
+                  isLoading: _isSaving,
+                  onPressed: _save,
+                ),
+
+                if (isEditing && isAdminOrManager) ...[
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Excluir Cliente', style: TextStyle(fontWeight: FontWeight.bold)),
+                      onPressed: _confirmDelete,
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

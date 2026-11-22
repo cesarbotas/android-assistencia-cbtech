@@ -24,7 +24,7 @@ class AuthRepository {
     required String password,
   }) async {
     try {
-      // Backend expects 'senha' instead of 'password' per LoginRequest schema
+      // Chamada estrita à API real (sem bypass/fallback silencioso)
       final response = await _dio.post(
         ApiEndpoints.login,
         data: {'email': email, 'senha': password},
@@ -36,13 +36,10 @@ class AuthRepository {
       }
       return authResponse;
     } on DioException catch (e) {
-      // Modo de demonstração / Fallback quando backend offline no MVP
-      if (e.type == DioExceptionType.connectionError ||
-          e.type == DioExceptionType.connectionTimeout) {
-        return _fallbackMockLogin(email, password);
-      }
-
-      final message = e.response?.data?['detail'] ?? e.response?.data?['title'] ?? 'Falha ao autenticar. Verifique seus dados.';
+      final message = e.response?.data?['detail'] ??
+                      e.response?.data?['title'] ??
+                      e.response?.data?['message'] ??
+                      'Falha ao conectar com o servidor da API. Verifique sua conexão e o ambiente.';
       throw ApiException(
         message: message.toString(),
         statusCode: e.response?.statusCode,
@@ -97,33 +94,5 @@ class AuthRepository {
         role: auth.userRole ?? 'Administrador',
       );
     }
-  }
-
-  // Fallback para permitir navegação completa mesmo antes do backend remoto ser publicado
-  Future<AuthResponse> _fallbackMockLogin(String email, String password) async {
-    final mockTenants = [
-      TenantInfo(
-        id: '11111111-1111-1111-1111-111111111111',
-        nome: 'CB Tech Matriz (Centro)',
-        cnpj: '12.345.678/0001-99',
-        perfil: 'Administrador',
-      ),
-      TenantInfo(
-        id: '22222222-2222-2222-2222-222222222222',
-        nome: 'CB Tech Express (Shopping)',
-        cnpj: '12.345.678/0002-88',
-        perfil: 'Técnico',
-      ),
-    ];
-
-    final authResponse = AuthResponse(
-      requiresTenantSelection: true,
-      userId: '99999999-9999-9999-9999-999999999999',
-      userName: 'Técnico Especialista',
-      userEmail: email,
-      availableTenants: mockTenants,
-    );
-
-    return authResponse;
   }
 }

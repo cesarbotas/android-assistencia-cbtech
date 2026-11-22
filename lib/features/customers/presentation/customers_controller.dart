@@ -128,15 +128,9 @@ class CustomersController extends StateNotifier<CustomersState> {
 
   Future<bool> saveCustomer(Customer customer) async {
     try {
-      final saved = await _repo.saveCustomer(customer);
-      final index = state.customers.indexWhere((c) => c.id == saved.id);
-      List<Customer> updatedList;
-      if (index != -1) {
-        updatedList = List.from(state.customers)..[index] = saved;
-      } else {
-        updatedList = [saved, ...state.customers];
-      }
-      state = state.copyWith(customers: updatedList);
+      await _repo.saveCustomer(customer);
+      // Recarrega imediatamente a lista direto da API
+      await loadCustomers();
       return true;
     } catch (e) {
       state = state.copyWith(errorMessage: e.toString());
@@ -147,9 +141,7 @@ class CustomersController extends StateNotifier<CustomersState> {
   Future<void> deleteCustomer(String id) async {
     try {
       await _repo.deleteCustomer(id);
-      state = state.copyWith(
-        customers: state.customers.where((c) => c.id != id).toList(),
-      );
+      await loadCustomers();
     } catch (e) {
       state = state.copyWith(errorMessage: e.toString());
     }

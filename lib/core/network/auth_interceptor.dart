@@ -1,12 +1,14 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../constants/api_endpoints.dart';
 import '../storage/secure_storage_service.dart';
 
 class AuthInterceptor extends Interceptor {
   final SecureStorageService _storage;
+  final VoidCallback onUnauthorized;
   bool _isRefreshing = false;
 
-  AuthInterceptor(this._storage);
+  AuthInterceptor(this._storage, this.onUnauthorized);
 
   @override
   Future<void> onRequest(
@@ -37,7 +39,6 @@ class AuthInterceptor extends Interceptor {
         try {
           final refreshToken = await _storage.getRefreshToken();
           if (refreshToken != null && refreshToken.isNotEmpty) {
-            // Instância separada do Dio para evitar loop no interceptor
             final dio = Dio(BaseOptions(
               baseUrl: err.requestOptions.baseUrl,
               headers: {'Content-Type': 'application/json'},
@@ -77,14 +78,15 @@ class AuthInterceptor extends Interceptor {
             }
           }
         } catch (_) {
-          // Se o refresh falhar, limpa sessão abaixo
+          // Refresh falhou
         } finally {
           _isRefreshing = false;
         }
       }
 
-      // Se falhou ao renovar o token, limpa credenciais locais
+      // Se o refresh falhou ou não havia refresh token, limpa storage e dispara onUnauthorized
       await _storage.clearAll();
+      onUnauthorized();
     }
 
     return handler.next(err);

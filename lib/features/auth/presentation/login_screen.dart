@@ -1,8 +1,10 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/config/environment_config.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/primary_button.dart';
 import 'auth_controller.dart';
@@ -17,9 +19,10 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(text: 'admin@cbtech.com.br');
-  final _passwordController = TextEditingController(text: '123456');
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isTestingConnection = false;
 
   @override
   void dispose() {
@@ -43,6 +46,51 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       } else if (state.status == AuthStatus.authenticated) {
         context.go('/dashboard');
       }
+    }
+  }
+
+  Future<void> _testConnection() async {
+    setState(() => _isTestingConnection = true);
+    try {
+      final dio = ref.read(apiClientProvider);
+      final baseUrl = dio.options.baseUrl;
+
+      final response = await dio.get('/auth/me', options: Options(receiveTimeout: const Duration(seconds: 4)));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Conexão OK com $baseUrl (Status: ${response.statusCode})')),
+        );
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Conexão bem-sucedida! O servidor respondeu (API ativa).')),
+          );
+        }
+      } else {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Falha na Conexão com a API'),
+              content: Text(
+                'Não foi possível conectar ao servidor em:\n${ref.read(apiClientProvider).options.baseUrl}\n\n'
+                'Erro: ${e.message}\n\n'
+                '💡 Dica para Celular Físico via USB:\n'
+                'Execute no terminal do seu computador:\nadb reverse tcp:5176 tcp:5176\n\n'
+                '💡 Dica para Wi-Fi Local:\n'
+                'Certifique-se de usar o IP local da sua máquina (ex: 192.168.x.x:5176).',
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK')),
+              ],
+            ),
+          );
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _isTestingConnection = false);
     }
   }
 
@@ -102,30 +150,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       color: AppColors.textSecondary,
                     ),
                   ),
-                  const SizedBox(height: 36),
+                  const SizedBox(height: 32),
 
+                  // Mensagem de Erro
                   if (authState.errorMessage != null) ...[
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: Colors.red.shade200),
                       ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.error_outline, color: Colors.red, size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              authState.errorMessage!,
-                              style: TextStyle(color: Colors.red.shade900, fontSize: 13),
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        authState.errorMessage!,
+                        style: TextStyle(color: Colors.red.shade800, fontSize: 13),
+                        textAlign: TextAlign.center,
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                   ],
 
                   // Campo E-mail
@@ -192,7 +234,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     isLoading: authState.isLoading,
                     onPressed: _submit,
                   ),
+                  const SizedBox(height: 12),
+
+                  // Botão de Diagnóstico / Teste de Conexão com a API
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+                    ),
+                    icon: _isTestingConnection
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.wifi_tethering, size: 18),
+                    label: Text(_isTestingConnection ? 'Testando conexão...' : 'Testar Conexão com a API'),
+                    onPressed: _isTestingConnection ? null : _testConnection,
+                  ),
                   const SizedBox(height: 24),
+
                   Consumer(
                     builder: (context, ref, _) {
                       final currentEnv = ref.watch(environmentNotifierProvider);

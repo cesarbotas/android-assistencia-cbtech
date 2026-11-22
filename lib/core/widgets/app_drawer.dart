@@ -11,9 +11,11 @@ class AppDrawer extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider);
     final currentRoute = GoRouterState.of(context).uri.toString();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Drawer(
-      child: Column(
+      child: ListView(
+        padding: EdgeInsets.zero,
         children: [
           // Header com Informações do Tenant Ativo e Usuário
           UserAccountsDrawerHeader(
@@ -62,75 +64,68 @@ class AppDrawer extends ConsumerWidget {
             ),
           ),
 
-          // Lista de Módulos Operacionais
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                _DrawerItem(
-                  icon: Icons.dashboard_outlined,
-                  title: 'Dashboard',
-                  route: '/dashboard',
-                  isSelected: currentRoute == '/dashboard',
-                ),
-                _DrawerItem(
-                  icon: Icons.assignment_outlined,
-                  title: 'Ordens de Serviço',
-                  route: '/work-orders',
-                  isSelected: currentRoute.startsWith('/work-orders'),
-                ),
-                _DrawerItem(
-                  icon: Icons.people_outline,
-                  title: 'Clientes',
-                  route: '/customers',
-                  isSelected: currentRoute.startsWith('/customers'),
-                ),
-                _DrawerItem(
-                  icon: Icons.phone_android_outlined,
-                  title: 'Aparelhos',
-                  route: '/devices',
-                  isSelected: currentRoute.startsWith('/devices'),
-                ),
-                _DrawerItem(
-                  icon: Icons.store_mall_directory_outlined,
-                  title: 'Fornecedores',
-                  route: '/suppliers',
-                  isSelected: currentRoute.startsWith('/suppliers'),
-                ),
-                _DrawerItem(
-                  icon: Icons.inventory_2_outlined,
-                  title: 'Peças & Estoque',
-                  route: '/inventory',
-                  isSelected: currentRoute.startsWith('/inventory'),
-                ),
-                _DrawerItem(
-                  icon: Icons.build_outlined,
-                  title: 'Serviços',
-                  route: '/services',
-                  isSelected: currentRoute.startsWith('/services'),
-                ),
-                _DrawerItem(
-                  icon: Icons.payments_outlined,
-                  title: 'Financeiro',
-                  route: '/finances',
-                  isSelected: currentRoute.startsWith('/finances'),
-                ),
-                const Divider(),
-                _DrawerItem(
-                  icon: Icons.settings_outlined,
-                  title: 'Configurações',
-                  route: '/settings',
-                  isSelected: currentRoute == '/settings',
-                ),
-              ],
-            ),
+          // Módulos Operacionais
+          _DrawerItem(
+            icon: Icons.dashboard_outlined,
+            title: 'Dashboard',
+            route: '/dashboard',
+            isSelected: currentRoute == '/dashboard',
+          ),
+          _DrawerItem(
+            icon: Icons.assignment_outlined,
+            title: 'Ordens de Serviço',
+            route: '/work-orders',
+            isSelected: currentRoute.startsWith('/work-orders'),
+          ),
+          _DrawerItem(
+            icon: Icons.people_outline,
+            title: 'Clientes',
+            route: '/customers',
+            isSelected: currentRoute.startsWith('/customers'),
+          ),
+          _DrawerItem(
+            icon: Icons.phone_android_outlined,
+            title: 'Aparelhos',
+            route: '/devices',
+            isSelected: currentRoute.startsWith('/devices'),
+          ),
+          _DrawerItem(
+            icon: Icons.store_mall_directory_outlined,
+            title: 'Fornecedores',
+            route: '/suppliers',
+            isSelected: currentRoute.startsWith('/suppliers'),
+          ),
+          _DrawerItem(
+            icon: Icons.inventory_2_outlined,
+            title: 'Peças & Estoque',
+            route: '/inventory',
+            isSelected: currentRoute.startsWith('/inventory'),
+          ),
+          _DrawerItem(
+            icon: Icons.build_outlined,
+            title: 'Serviços',
+            route: '/services',
+            isSelected: currentRoute.startsWith('/services'),
+          ),
+          _DrawerItem(
+            icon: Icons.payments_outlined,
+            title: 'Financeiro',
+            route: '/finances',
+            isSelected: currentRoute.startsWith('/finances'),
+          ),
+          const Divider(),
+          _DrawerItem(
+            icon: Icons.settings_outlined,
+            title: 'Configurações',
+            route: '/settings',
+            isSelected: currentRoute == '/settings',
           ),
 
           // Rodapé com Troca de Tenant e Logout
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.swap_horiz, color: AppColors.primary),
-            title: const Text('Trocar Assistência'),
+            title: Text('Trocar Assistência', style: TextStyle(color: isDark ? Colors.white : Colors.black87)),
             onTap: () {
               Navigator.pop(context);
               context.go('/select-tenant');
@@ -138,13 +133,13 @@ class AppDrawer extends ConsumerWidget {
           ),
           ListTile(
             leading: const Icon(Icons.exit_to_app, color: Colors.red),
-            title: const Text('Sair', style: TextStyle(color: Colors.red)),
+            title: const Text('Sair', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
             onTap: () async {
               Navigator.pop(context);
               await ref.read(authControllerProvider.notifier).logout();
             },
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -166,15 +161,17 @@ class _DrawerItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return ListTile(
       leading: Icon(
         icon,
-        color: isSelected ? AppColors.primary : Colors.grey.shade700,
+        color: isSelected ? AppColors.primary : (isDark ? Colors.white70 : Colors.grey.shade700),
       ),
       title: Text(
         title,
         style: TextStyle(
-          color: isSelected ? AppColors.primary : Colors.black87,
+          color: isSelected ? AppColors.primary : (isDark ? Colors.white : Colors.black87),
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
       ),
