@@ -2,11 +2,11 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/environment_config.dart';
 import '../storage/secure_storage_service.dart';
+import '../../features/auth/presentation/auth_controller.dart';
 import 'auth_interceptor.dart';
 
 final apiClientProvider = Provider<Dio>((ref) {
   final storage = ref.watch(secureStorageServiceProvider);
-  final env = ref.watch(environmentNotifierProvider);
   final baseUrl = ref.read(environmentNotifierProvider.notifier).baseUrl;
 
   final dio = Dio(
@@ -21,7 +21,14 @@ final apiClientProvider = Provider<Dio>((ref) {
     ),
   );
 
-  dio.interceptors.add(AuthInterceptor(storage));
+  dio.interceptors.add(
+    AuthInterceptor(
+      storage,
+      () {
+        ref.read(authExpiryProvider.notifier).state++;
+      },
+    ),
+  );
   dio.interceptors.add(
     LogInterceptor(
       requestBody: true,

@@ -5,6 +5,8 @@ import '../data/models/tenant_info.dart';
 
 enum AuthStatus { initial, unauthenticated, selectingTenant, authenticated }
 
+final authExpiryProvider = StateProvider<int>((ref) => 0);
+
 class AuthState {
   final AuthStatus status;
   final bool isLoading;
@@ -79,10 +81,10 @@ class AuthController extends StateNotifier<AuthState> {
     final tenantId = await _storage.getTenantId();
     final tenantName = await _storage.getTenantName();
     final userData = await _storage.getUserData();
+    final token = await _storage.getAccessToken();
 
-    if (tenantId != null && userData['id'] != null) {
-      // Simulate check for subscription status (e.g. inactive if tenantId contains 'expired')
-      final isActive = !tenantId.contains('expired');
+    if (token != null && token.isNotEmpty && userData['id'] != null) {
+      final isActive = ! (tenantId ?? '').contains('expired');
       state = state.copyWith(
         status: AuthStatus.authenticated,
         activeTenantId: tenantId,

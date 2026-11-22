@@ -29,6 +29,7 @@ import '../../features/work_orders/presentation/work_orders_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authControllerProvider);
+  final authExpiry = ref.watch(authExpiryProvider);
 
   return GoRouter(
     initialLocation: '/dashboard',
@@ -37,7 +38,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isSelectingTenant = state.matchedLocation == '/select-tenant';
       final isSubscriptionLocked = state.matchedLocation == '/subscription-locked';
 
-      if (authState.status == AuthStatus.unauthenticated) {
+      if (authExpiry > 0 || authState.status == AuthStatus.unauthenticated) {
         return isLoggingIn ? null : '/login';
       }
 
