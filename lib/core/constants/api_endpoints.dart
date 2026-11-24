@@ -10,7 +10,7 @@ class ApiEndpoints {
 
   // Clientes & Aparelhos
   static const String customers = '/clientes';
-  static const String devices = '/devices';
+  static const String devices = '/aparelhos';
   static const String brands = '/marcas';
   static const String models = '/models';
 

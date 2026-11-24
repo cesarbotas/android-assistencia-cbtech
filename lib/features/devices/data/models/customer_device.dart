@@ -1,101 +1,106 @@
 class CustomerDevice {
   final String id;
-  final String tenantId;
-  final String customerId;
-  final String customerName;
-  final String brandName;
-  final String modelName;
+  final String customerId; // 'clienteId'
+  final String customerName; // 'nomeCliente'
+  final String brandId; // 'marcaId'
+  final String brandName; // 'nomeMarca'
+  final String modelName; // 'modelo'
   final String? imei1;
   final String? imei2;
-  final String? serialNumber;
-  final String? color;
-  final String? storage;
-  final String? notes;
-  final DateTime createdAt;
+  final String? serialNumber; // 'numeroSerie'
+  final String? color; // 'cor'
+  final String? screenPassword; // 'senhaTela'
+  final bool isActive; // 'ativo'
+  final DateTime createdAt; // 'criadoEm'
+
+  // Backward compatibility getters
+  String get tenantId => '11111111-1111-1111-1111-111111111111';
+  String? get storage => null;
+  String? get notes => null;
 
   CustomerDevice({
     required this.id,
-    required this.tenantId,
     required this.customerId,
     required this.customerName,
+    required this.brandId,
     required this.brandName,
     required this.modelName,
     this.imei1,
     this.imei2,
     this.serialNumber,
     this.color,
-    this.storage,
-    this.notes,
+    this.screenPassword,
+    this.isActive = true,
     required this.createdAt,
+    String? tenantId,
+    String? storage,
+    String? notes,
   });
 
   CustomerDevice copyWith({
     String? id,
-    String? tenantId,
     String? customerId,
     String? customerName,
+    String? brandId,
     String? brandName,
     String? modelName,
     String? imei1,
     String? imei2,
     String? serialNumber,
     String? color,
-    String? storage,
-    String? notes,
+    String? screenPassword,
+    bool? isActive,
     DateTime? createdAt,
   }) {
     return CustomerDevice(
       id: id ?? this.id,
-      tenantId: tenantId ?? this.tenantId,
       customerId: customerId ?? this.customerId,
       customerName: customerName ?? this.customerName,
+      brandId: brandId ?? this.brandId,
       brandName: brandName ?? this.brandName,
       modelName: modelName ?? this.modelName,
       imei1: imei1 ?? this.imei1,
       imei2: imei2 ?? this.imei2,
       serialNumber: serialNumber ?? this.serialNumber,
       color: color ?? this.color,
-      storage: storage ?? this.storage,
-      notes: notes ?? this.notes,
+      screenPassword: screenPassword ?? this.screenPassword,
+      isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
     );
   }
 
   factory CustomerDevice.fromJson(Map<String, dynamic> json) {
     return CustomerDevice(
-      id: json['id'] as String,
-      tenantId: json['tenantId'] as String? ?? '',
-      customerId: json['customerId'] as String,
-      customerName: json['customerName'] as String? ?? '',
-      brandName: json['brandName'] as String? ?? '',
-      modelName: json['modelName'] as String? ?? '',
+      id: json['id'] as String? ?? '',
+      customerId: json['clienteId'] as String? ?? json['customerId'] as String? ?? '',
+      customerName: json['nomeCliente'] as String? ?? json['customerName'] as String? ?? '',
+      brandId: json['marcaId'] as String? ?? json['brandId'] as String? ?? '',
+      brandName: json['nomeMarca'] as String? ?? json['brandName'] as String? ?? '',
+      modelName: json['modelo'] as String? ?? json['modelName'] as String? ?? '',
       imei1: json['imei1'] as String?,
       imei2: json['imei2'] as String?,
-      serialNumber: json['serialNumber'] as String?,
-      color: json['color'] as String?,
-      storage: json['storage'] as String?,
-      notes: json['notes'] as String?,
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'] as String)
-          : DateTime.now(),
+      serialNumber: json['numeroSerie'] as String? ?? json['serialNumber'] as String?,
+      color: json['cor'] as String? ?? json['color'] as String?,
+      screenPassword: json['senhaTela'] as String?,
+      isActive: json['ativo'] as bool? ?? json['isActive'] as bool? ?? true,
+      createdAt: json['criadoEm'] != null
+          ? DateTime.parse(json['criadoEm'] as String)
+          : (json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : DateTime.now()),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'tenantId': tenantId,
-      'customerId': customerId,
-      'customerName': customerName,
-      'brandName': brandName,
-      'modelName': modelName,
+      if (id.isNotEmpty) 'id': id,
+      'clienteId': customerId,
+      'marcaId': brandId.isNotEmpty ? brandId : '00000000-0000-0000-0000-000000000000',
+      'modelo': modelName,
+      'cor': color,
       'imei1': imei1,
       'imei2': imei2,
-      'serialNumber': serialNumber,
-      'color': color,
-      'storage': storage,
-      'notes': notes,
-      'createdAt': createdAt.toIso8601String(),
+      'numeroSerie': serialNumber,
+      'senhaTela': screenPassword,
+      'ativo': isActive,
     };
   }
 }
