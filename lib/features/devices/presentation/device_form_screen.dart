@@ -33,7 +33,6 @@ class _DeviceFormScreenState extends ConsumerState<DeviceFormScreen> {
   late TextEditingController _imei2Controller;
   late TextEditingController _serialController;
   late TextEditingController _colorController;
-  late TextEditingController _storageController;
   late TextEditingController _notesController;
   bool _isSaving = false;
 
@@ -48,8 +47,7 @@ class _DeviceFormScreenState extends ConsumerState<DeviceFormScreen> {
     _imei2Controller = TextEditingController(text: d?.imei2 ?? '');
     _serialController = TextEditingController(text: d?.serialNumber ?? '');
     _colorController = TextEditingController(text: d?.color ?? 'Preto');
-    _storageController = TextEditingController(text: d?.storage ?? '128 GB');
-    _notesController = TextEditingController(text: d?.notes ?? '');
+    _notesController = TextEditingController(text: '');
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadBrandsAndCascade();
@@ -61,7 +59,7 @@ class _DeviceFormScreenState extends ConsumerState<DeviceFormScreen> {
     if (devState.brands.isNotEmpty) {
       if (widget.device != null) {
         final matchBrand = devState.brands.firstWhere(
-          (b) => b.name == widget.device!.brandName,
+          (b) => b.id == widget.device!.brandId || b.name == widget.device!.brandName,
           orElse: () => devState.brands.first,
         );
         setState(() => _selectedBrand = matchBrand);
@@ -91,7 +89,6 @@ class _DeviceFormScreenState extends ConsumerState<DeviceFormScreen> {
     _imei2Controller.dispose();
     _serialController.dispose();
     _colorController.dispose();
-    _storageController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -109,9 +106,9 @@ class _DeviceFormScreenState extends ConsumerState<DeviceFormScreen> {
 
     final deviceToSave = CustomerDevice(
       id: widget.device?.id ?? '',
-      tenantId: widget.device?.tenantId ?? '',
       customerId: _selectedCustomerId!,
       customerName: _selectedCustomerName ?? 'Cliente',
+      brandId: _selectedBrand?.id ?? '',
       brandName: _selectedBrand?.name ?? 'Outro',
       modelName: _customModelController.text.trim().isNotEmpty
           ? _customModelController.text.trim()
@@ -120,8 +117,7 @@ class _DeviceFormScreenState extends ConsumerState<DeviceFormScreen> {
       imei2: _imei2Controller.text.trim().isNotEmpty ? _imei2Controller.text.trim() : null,
       serialNumber: _serialController.text.trim().isNotEmpty ? _serialController.text.trim() : null,
       color: _colorController.text.trim().isNotEmpty ? _colorController.text.trim() : null,
-      storage: _storageController.text.trim().isNotEmpty ? _storageController.text.trim() : null,
-      notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+      isActive: true,
       createdAt: widget.device?.createdAt ?? DateTime.now(),
     );
 
@@ -166,7 +162,7 @@ class _DeviceFormScreenState extends ConsumerState<DeviceFormScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                initialValue: _selectedCustomerId,
+                value: custState.customers.any((c) => c.id == _selectedCustomerId) ? _selectedCustomerId : null,
                 decoration: const InputDecoration(
                   labelText: 'Selecione o Cliente *',
                   prefixIcon: Icon(Icons.person),
@@ -196,7 +192,7 @@ class _DeviceFormScreenState extends ConsumerState<DeviceFormScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<Brand>(
-                initialValue: _selectedBrand,
+                value: devState.brands.any((b) => b.id == _selectedBrand?.id) ? _selectedBrand : null,
                 decoration: const InputDecoration(
                   labelText: 'Fabricante / Marca *',
                   prefixIcon: Icon(Icons.business),
@@ -214,7 +210,7 @@ class _DeviceFormScreenState extends ConsumerState<DeviceFormScreen> {
               const SizedBox(height: 14),
               if (_availableModels.isNotEmpty) ...[
                 DropdownButtonFormField<DeviceModel>(
-                  initialValue: _selectedModel,
+                  value: _availableModels.contains(_selectedModel) ? _selectedModel : null,
                   decoration: const InputDecoration(
                     labelText: 'Catálogo de Modelos Sugeridos',
                     prefixIcon: Icon(Icons.smartphone),
@@ -252,57 +248,44 @@ class _DeviceFormScreenState extends ConsumerState<DeviceFormScreen> {
                 children: [
                   Expanded(
                     child: CustomTextField(
-                      controller: _colorController,
-                      label: 'Cor',
-                      hint: 'Preto, Branco, Azul...',
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: CustomTextField(
-                      controller: _storageController,
-                      label: 'Armazenamento',
-                      hint: '64 GB, 128 GB, 256 GB...',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              CustomTextField(
-                controller: _imei1Controller,
-                label: 'IMEI 1 (Opcional para abertura de OS)',
-                hint: '15 dígitos numéricos',
-                prefixIcon: Icons.fingerprint,
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomTextField(
-                      controller: _imei2Controller,
-                      label: 'IMEI 2 (Dual SIM)',
-                      hint: 'Opcional',
+                      controller: _imei1Controller,
+                      label: 'IMEI 1',
+                      hint: '354...',
                       keyboardType: TextInputType.number,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: CustomTextField(
-                      controller: _serialController,
-                      label: 'Número de Série',
-                      hint: 'Ex: F2LX...',
+                      controller: _imei2Controller,
+                      label: 'IMEI 2 (Opcional)',
+                      hint: '354...',
+                      keyboardType: TextInputType.number,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 14),
-              CustomTextField(
-                controller: _notesController,
-                label: 'Observações do Aparelho',
-                hint: 'Detalhes de tela, histórico de peças trocadas...',
+              Row(
+                children: [
+                  Expanded(
+                    child: CustomTextField(
+                      controller: _serialController,
+                      label: 'Número de Série',
+                      hint: 'SN...',
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: CustomTextField(
+                      controller: _colorController,
+                      label: 'Cor',
+                      hint: 'Ex: Preto, Azul...',
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 32),
 
               PrimaryButton(
                 text: isEditing ? 'Salvar Alterações' : 'Cadastrar Aparelho',
