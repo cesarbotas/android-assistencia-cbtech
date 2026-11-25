@@ -10,6 +10,7 @@ import '../../features/customers/presentation/customer_form_screen.dart';
 import '../../features/customers/presentation/customers_screen.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/devices/data/models/customer_device.dart';
+import '../../features/devices/data/models/device_model.dart';
 import '../../features/devices/presentation/device_form_screen.dart';
 import '../../features/devices/presentation/devices_screen.dart';
 import '../../features/finances/presentation/finances_screen.dart';
@@ -20,9 +21,11 @@ import '../../features/services/data/models/service_item.dart';
 import '../../features/services/presentation/service_form_screen.dart';
 import '../../features/services/presentation/services_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
+import '../../features/settings/presentation/users_management_screen.dart';
 import '../../features/suppliers/data/models/supplier.dart';
 import '../../features/suppliers/presentation/supplier_form_screen.dart';
 import '../../features/suppliers/presentation/suppliers_screen.dart';
+import '../../features/work_orders/data/models/work_order.dart';
 import '../../features/work_orders/presentation/new_work_order_screen.dart';
 import '../../features/work_orders/presentation/work_order_detail_screen.dart';
 import '../../features/work_orders/presentation/work_orders_screen.dart';
@@ -38,7 +41,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isSelectingTenant = state.matchedLocation == '/select-tenant';
       final isSubscriptionLocked = state.matchedLocation == '/subscription-locked';
 
-      if (authExpiry > 0 || authState.status == AuthStatus.unauthenticated) {
+      if (authExpiry > 0 || authState.status == AuthStatus.unauthenticated || authState.status == AuthStatus.initial) {
         return isLoggingIn ? null : '/login';
       }
 
@@ -83,10 +86,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const NewWorkOrderScreen(),
           ),
           GoRoute(
-            path: 'detail',
-            builder: (context, state) => WorkOrderDetailScreen(
-              workOrderId: (state.extra as String?) ?? '',
+            path: 'edit',
+            builder: (context, state) => NewWorkOrderScreen(
+              workOrder: state.extra as WorkOrder?,
             ),
+          ),
+          GoRoute(
+            path: 'detail',
+            builder: (context, state) {
+              final extra = state.extra;
+              if (extra is WorkOrder) {
+                return WorkOrderDetailScreen(workOrder: extra);
+              } else if (extra is String) {
+                return WorkOrderDetailScreen(workOrderId: extra);
+              }
+              return const WorkOrdersScreen();
+            },
           ),
         ],
       ),
@@ -124,24 +139,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
-      // Fornecedores
-      GoRoute(
-        path: '/suppliers',
-        builder: (context, state) => const SuppliersScreen(),
-        routes: [
-          GoRoute(
-            path: 'new',
-            builder: (context, state) => const SupplierFormScreen(),
-          ),
-          GoRoute(
-            path: 'edit',
-            builder: (context, state) => SupplierFormScreen(
-              supplier: state.extra as Supplier?,
-            ),
-          ),
-        ],
-      ),
-      // Peças e Estoque
+      // Estoque & Peças
       GoRoute(
         path: '/inventory',
         builder: (context, state) => const InventoryScreen(),
@@ -175,13 +173,38 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
+      // Fornecedores
       GoRoute(
-        path: '/finances',
-        builder: (context, state) => const FinancesScreen(),
+        path: '/suppliers',
+        builder: (context, state) => const SuppliersScreen(),
+        routes: [
+          GoRoute(
+            path: 'new',
+            builder: (context, state) => const SupplierFormScreen(),
+          ),
+          GoRoute(
+            path: 'edit',
+            builder: (context, state) => SupplierFormScreen(
+              supplier: state.extra as Supplier?,
+            ),
+          ),
+        ],
       ),
+      // Configurações & Usuários
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
+        routes: [
+          GoRoute(
+            path: 'users',
+            builder: (context, state) => const UsersManagementScreen(),
+          ),
+        ],
+      ),
+      // Financeiro
+      GoRoute(
+        path: '/finance',
+        builder: (context, state) => const FinancesScreen(),
       ),
     ],
   );

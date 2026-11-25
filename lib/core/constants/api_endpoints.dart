@@ -1,33 +1,32 @@
 class ApiEndpoints {
-  static const String baseUrl = 'http://localhost:5176/api/v1'; // Emulador Android -> localhost
-
-  // Autenticação & Tenants
   static const String login = '/auth/login';
-  static const String selectTenant = '/auth/select-tenant';
   static const String refreshToken = '/auth/refresh';
   static const String logout = '/auth/logout';
-  static const String registerTenant = '/tenants';
+  static const String me = '/auth/me';
 
-  // Clientes & Aparelhos
+  // Clientes & Aparelhos & Marcas
   static const String customers = '/clientes';
-  static const String devices = '/devices';
+  static const String devices = '/aparelhos';
   static const String brands = '/marcas';
-  static const String models = '/models';
 
-  // Fornecedores, Produtos & Estoque
-  static const String suppliers = '/suppliers';
-  static const String products = '/products';
-  static const String purchases = '/purchases';
-  static const String inventory = '/inventory';
-  static const String stockMovements = '/stock/movements';
-  static const String purchaseOrders = '/purchase-orders';
+  // Fornecedores, Categorias & Produtos
+  static const String suppliers = '/fornecedores';
+  static const String categories = '/categorias';
+  static const String products = '/produtos';
 
-  // Serviços & Ordens de Serviço
-  static const String services = '/services';
-  static const String workOrders = '/work-orders';
-  static const String budgets = '/budgets';
-  static const String payments = '/payments';
+  // Serviços & Categorias de Serviços
+  static const String serviceCategories = '/categorias-servicos';
+  static const String services = '/servicos';
 
-  // Dashboard & Relatórios
+  // Orçamentos & Ordens de Serviço
+  static const String budgets = '/orcamentos';
+  static const String workOrders = '/ordens-servico';
+
+  // Estoque, Movimentações & Compras
+  static const String stockMovements = '/movimentacoes-estoque';
+  static const String purchaseOrders = '/pedidos-compra';
+
+  // Financeiro
+  static const String payments = '/financeiro';
   static const String dashboard = '/dashboard';
 }

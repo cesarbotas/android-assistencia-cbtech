@@ -108,15 +108,9 @@ class DevicesController extends StateNotifier<DevicesState> {
 
   Future<bool> saveDevice(CustomerDevice device) async {
     try {
-      final saved = await _repo.saveDevice(device);
-      final idx = state.devices.indexWhere((d) => d.id == saved.id);
-      List<CustomerDevice> updated;
-      if (idx != -1) {
-        updated = List.from(state.devices)..[idx] = saved;
-      } else {
-        updated = [saved, ...state.devices];
-      }
-      state = state.copyWith(devices: updated);
+      await _repo.saveDevice(device);
+      final freshDevices = await _repo.getCustomerDevices();
+      state = state.copyWith(devices: freshDevices);
       return true;
     } catch (e) {
       state = state.copyWith(errorMessage: e.toString());

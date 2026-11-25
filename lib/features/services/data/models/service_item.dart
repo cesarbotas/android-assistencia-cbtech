@@ -1,32 +1,39 @@
 class ServiceItem {
   final String id;
-  final String tenantId;
-  final String name;
-  final String? description;
-  final String category; // Troca de Peça, Reparo em Placa, Limpeza/Banho, Software/Reset, Outros
-  final double defaultPrice;
-  final int estimatedTimeMinutes;
-  final bool isActive;
+  final String name; // 'nome'
+  final String categoryServiceId; // 'categoriaServicoId'
+  final String? description; // 'descricao'
+  final double defaultPrice; // 'precoSugerido'
+  final int estimatedTimeMinutes; // 'tempoEstimadoMinutos'
+  final bool isActive; // 'ativo'
   final DateTime createdAt;
+
+  // Backward compatibility getters & fields
+  final String? _tenantId;
+  final String? _category;
+
+  String get tenantId => _tenantId ?? '11111111-1111-1111-1111-111111111111';
+  String get category => _category ?? 'Geral';
 
   ServiceItem({
     required this.id,
-    required this.tenantId,
     required this.name,
+    this.categoryServiceId = '00000000-0000-0000-0000-000000000000',
     this.description,
-    this.category = 'Troca de Peça',
     required this.defaultPrice,
     this.estimatedTimeMinutes = 60,
     this.isActive = true,
     required this.createdAt,
-  });
+    String? tenantId,
+    String? category,
+  })  : _tenantId = tenantId,
+        _category = category;
 
   ServiceItem copyWith({
     String? id,
-    String? tenantId,
     String? name,
+    String? categoryServiceId,
     String? description,
-    String? category,
     double? defaultPrice,
     int? estimatedTimeMinutes,
     bool? isActive,
@@ -34,10 +41,9 @@ class ServiceItem {
   }) {
     return ServiceItem(
       id: id ?? this.id,
-      tenantId: tenantId ?? this.tenantId,
       name: name ?? this.name,
+      categoryServiceId: categoryServiceId ?? this.categoryServiceId,
       description: description ?? this.description,
-      category: category ?? this.category,
       defaultPrice: defaultPrice ?? this.defaultPrice,
       estimatedTimeMinutes: estimatedTimeMinutes ?? this.estimatedTimeMinutes,
       isActive: isActive ?? this.isActive,
@@ -47,31 +53,28 @@ class ServiceItem {
 
   factory ServiceItem.fromJson(Map<String, dynamic> json) {
     return ServiceItem(
-      id: json['id'] as String,
-      tenantId: json['tenantId'] as String? ?? '',
-      name: json['name'] as String,
-      description: json['description'] as String?,
-      category: json['category'] as String? ?? 'Geral',
-      defaultPrice: (json['defaultPrice'] as num).toDouble(),
-      estimatedTimeMinutes: json['estimatedTimeMinutes'] as int? ?? 60,
-      isActive: json['isActive'] as bool? ?? true,
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'] as String)
-          : DateTime.now(),
+      id: json['id'] as String? ?? '',
+      name: json['nome'] as String? ?? json['name'] as String? ?? '',
+      categoryServiceId: json['categoriaServicoId'] as String? ?? json['categoryServiceId'] as String? ?? '',
+      description: json['descricao'] as String? ?? json['description'] as String?,
+      defaultPrice: (json['precoSugerido'] as num?)?.toDouble() ?? (json['defaultPrice'] as num?)?.toDouble() ?? 0.0,
+      estimatedTimeMinutes: json['tempoEstimadoMinutos'] as int? ?? json['estimatedTimeMinutes'] as int? ?? 60,
+      isActive: json['ativo'] as bool? ?? json['isActive'] as bool? ?? true,
+      createdAt: json['criadoEm'] != null
+          ? DateTime.parse(json['criadoEm'] as String)
+          : (json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : DateTime.now()),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'tenantId': tenantId,
-      'name': name,
-      'description': description,
-      'category': category,
-      'defaultPrice': defaultPrice,
-      'estimatedTimeMinutes': estimatedTimeMinutes,
-      'isActive': isActive,
-      'createdAt': createdAt.toIso8601String(),
+      if (id.isNotEmpty) 'id': id,
+      'nome': name,
+      'categoriaServicoId': categoryServiceId.isNotEmpty ? categoryServiceId : '00000000-0000-0000-0000-000000000000',
+      'descricao': description,
+      'precoSugerido': defaultPrice,
+      'tempoEstimadoMinutos': estimatedTimeMinutes,
+      'ativo': isActive,
     };
   }
 }

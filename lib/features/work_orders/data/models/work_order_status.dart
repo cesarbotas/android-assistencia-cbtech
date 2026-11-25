@@ -17,9 +17,22 @@ enum WorkOrderStatus {
   const WorkOrderStatus(this.label);
 
   static WorkOrderStatus fromString(String val) {
+    final upper = val.toUpperCase().trim();
+    if (upper.contains('AGUARDANDO_PECA') || upper.contains('PECA')) return WorkOrderStatus.aguardandoPeca;
+    if (upper.contains('DIAGNOSTICO')) return WorkOrderStatus.diagnostico;
+    if (upper.contains('ORCAMENTO')) return WorkOrderStatus.orcamentoPendente;
+    if (upper.contains('APROVADA')) return WorkOrderStatus.aprovada;
+    if (upper.contains('REPARO') || upper.contains('ANDAMENTO')) return WorkOrderStatus.emReparo;
+    if (upper.contains('TESTES')) return WorkOrderStatus.testes;
+    if (upper.contains('CONCLUIDO') || upper.contains('CONCLUIDA')) return WorkOrderStatus.concluida;
+    if (upper.contains('ENTREGUE')) return WorkOrderStatus.entregue;
+    if (upper.contains('CANCELADO') || upper.contains('CANCELADA')) return WorkOrderStatus.cancelada;
+
+    final cleanVal = val.toLowerCase().replaceAll('_', '');
     for (final s in WorkOrderStatus.values) {
-      if (s.label.toLowerCase() == val.toLowerCase() ||
-          s.name.toLowerCase() == val.toLowerCase()) {
+      final cleanName = s.name.toLowerCase().replaceAll('_', '');
+      final cleanLabel = s.label.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      if (cleanName == cleanVal || cleanLabel == cleanVal.replaceAll(RegExp(r'[^a-z0-9]'), '')) {
         return s;
       }
     }
@@ -51,28 +64,8 @@ enum WorkOrderStatus {
     }
   }
 
-  // Lista de próximas transições permitidas
+  // Transições flexíveis para permitir avançar para qualquer status
   List<WorkOrderStatus> get nextAllowedTransitions {
-    switch (this) {
-      case WorkOrderStatus.aberta:
-        return [WorkOrderStatus.diagnostico, WorkOrderStatus.orcamentoPendente, WorkOrderStatus.cancelada];
-      case WorkOrderStatus.diagnostico:
-        return [WorkOrderStatus.orcamentoPendente, WorkOrderStatus.cancelada];
-      case WorkOrderStatus.orcamentoPendente:
-        return [WorkOrderStatus.aprovada, WorkOrderStatus.cancelada];
-      case WorkOrderStatus.aprovada:
-        return [WorkOrderStatus.emReparo, WorkOrderStatus.aguardandoPeca, WorkOrderStatus.cancelada];
-      case WorkOrderStatus.aguardandoPeca:
-        return [WorkOrderStatus.emReparo, WorkOrderStatus.cancelada];
-      case WorkOrderStatus.emReparo:
-        return [WorkOrderStatus.testes, WorkOrderStatus.aguardandoPeca];
-      case WorkOrderStatus.testes:
-        return [WorkOrderStatus.concluida, WorkOrderStatus.emReparo];
-      case WorkOrderStatus.concluida:
-        return [WorkOrderStatus.entregue];
-      case WorkOrderStatus.entregue:
-      case WorkOrderStatus.cancelada:
-        return [];
-    }
+    return WorkOrderStatus.values.where((st) => st != this).toList();
   }
 }

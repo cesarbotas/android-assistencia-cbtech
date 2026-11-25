@@ -15,12 +15,26 @@ class InventoryScreen extends ConsumerStatefulWidget {
 
 class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   final _searchController = TextEditingController();
+  final _scrollController = ScrollController();
   final _currencyFormat = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      ref.read(productsControllerProvider.notifier).loadMore();
+    }
   }
 
   @override
@@ -28,16 +42,6 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     final state = ref.watch(productsControllerProvider);
     final controller = ref.read(productsControllerProvider.notifier);
     final products = state.filteredProducts;
-
-    final categories = [
-      'Todas',
-      'Telas',
-      'Baterias',
-      'Conectores',
-      'Câmeras',
-      'Placas',
-      'Acessórios',
-    ];
 
     return Scaffold(
       drawer: const AppDrawer(),
@@ -64,7 +68,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => controller.loadProducts(),
+            onPressed: () => controller.loadAll(),
           ),
         ],
       ),
@@ -73,7 +77,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text('Nova Peça', style: TextStyle(fontWeight: FontWeight.bold)),
-        onPressed: () => context.go('/inventory/new'),
+        onPressed: () => context.push('/inventory/new'),
       ),
       body: Column(
         children: [
@@ -83,7 +87,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Buscar por SKU, nome da peça ou modelo compatível...',
+                hintText: 'Buscar por SKU, nome da peça ou categoria...',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
@@ -99,22 +103,32 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
             ),
           ),
 
-          // Categorias de Peças
+          // Categorias de Peças (Chips)
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
-              children: categories.map((cat) {
-                final isSelected = state.selectedCategory == cat;
-                return Padding(
+              children: [
+                Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: FilterChip(
-                    label: Text(cat),
-                    selected: isSelected,
-                    onSelected: (_) => controller.setCategory(cat),
+                    label: const Text('Todas'),
+                    selected: state.selectedCategory == 'Todas',
+                    onSelected: (_) => controller.setCategory('Todas'),
                   ),
-                );
-              }).toList(),
+                ),
+                ...state.categories.map((cat) {
+                  final isSelected = state.selectedCategory == cat.id;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilterChip(
+                      label: Text(cat.name),
+                      selected: isSelected,
+                      onSelected: (_) => controller.setCategory(cat.id),
+                    ),
+                  );
+                }),
+              ],
             ),
           ),
           const SizedBox(height: 8),
@@ -140,9 +154,17 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                         ),
                       )
                     : ListView.builder(
+                        controller: _scrollController,
                         padding: const EdgeInsets.all(12),
-                        itemCount: products.length,
+                        itemCount: products.length + (state.isLoadingMore ? 1 : 0),
                         itemBuilder: (context, index) {
+                          if (index >= products.length) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          }
+
                           final p = products[index];
                           final isLow = p.isLowStock;
 
@@ -152,7 +174,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             child: InkWell(
                               borderRadius: BorderRadius.circular(12),
-                              onTap: () => context.go('/inventory/edit', extra: p),
+                              onTap: () => context.push('/inventory/edit', extra: p),
                               child: Padding(
                                 padding: const EdgeInsets.all(14),
                                 child: Row(
@@ -192,7 +214,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            'SKU: ${p.sku} • Compatível: ${p.compatibleModels}',
+                                            'SKU: ${p.sku}',
                                             style: const TextStyle(fontSize: 12, color: Colors.grey),
                                             overflow: TextOverflow.ellipsis,
                                           ),
@@ -207,7 +229,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                                                   borderRadius: BorderRadius.circular(4),
                                                 ),
                                                 child: Text(
-                                                  p.category,
+                                                  p.unit,
                                                   style: const TextStyle(fontSize: 11, color: Colors.black87),
                                                 ),
                                               ),
@@ -221,35 +243,12 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                                                       color: isLow ? Colors.red.shade700 : Colors.black87,
                                                     ),
                                                   ),
-                                                  if (isLow) ...[
-                                                    const SizedBox(width: 6),
-                                                    Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.red.shade100,
-                                                        borderRadius: BorderRadius.circular(4),
-                                                      ),
-                                                      child: Text(
-                                                        'MÍN: ${p.minStock}',
-                                                        style: TextStyle(
-                                                          color: Colors.red.shade900,
-                                                          fontSize: 9,
-                                                          fontWeight: FontWeight.bold,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
                                                 ],
                                               ),
                                             ],
                                           ),
                                         ],
                                       ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.swap_vert, color: AppColors.primary),
-                                      tooltip: 'Registrar Movimentação',
-                                      onPressed: () => context.push('/inventory/movements/new', extra: p),
                                     ),
                                   ],
                                 ),
