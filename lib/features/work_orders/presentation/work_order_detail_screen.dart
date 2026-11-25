@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
@@ -18,9 +19,10 @@ import 'work_order_document_screen.dart';
 import 'work_orders_controller.dart';
 
 class WorkOrderDetailScreen extends ConsumerStatefulWidget {
-  final String workOrderId;
+  final WorkOrder? workOrder;
+  final String? workOrderId;
 
-  const WorkOrderDetailScreen({super.key, required this.workOrderId});
+  const WorkOrderDetailScreen({super.key, this.workOrder, this.workOrderId});
 
   @override
   ConsumerState<WorkOrderDetailScreen> createState() => _WorkOrderDetailScreenState();
@@ -35,9 +37,13 @@ class _WorkOrderDetailScreenState extends ConsumerState<WorkOrderDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _diagnosisController = TextEditingController();
+    _diagnosisController = TextEditingController(text: widget.workOrder?.diagnosis ?? '');
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(workOrdersControllerProvider.notifier).selectWorkOrder(widget.workOrderId);
+      if (widget.workOrder != null) {
+        ref.read(workOrdersControllerProvider.notifier).setSelectedWorkOrder(widget.workOrder!);
+      } else if (widget.workOrderId != null) {
+        ref.read(workOrdersControllerProvider.notifier).selectWorkOrder(widget.workOrderId!);
+      }
     });
   }
 
@@ -391,9 +397,10 @@ Acompanhe os detalhes da sua manutenção conosco!
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     final woState = ref.watch(workOrdersControllerProvider);
-    final wo = woState.selectedWorkOrder;
+    final wo = woState.selectedWorkOrder ?? widget.workOrder;
 
     if (wo == null && woState.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -416,6 +423,11 @@ Acompanhe os detalhes da sua manutenção conosco!
         appBar: AppBar(
           title: Text(wo.sequentialNumber),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, color: Colors.white),
+              tooltip: 'Editar OS',
+              onPressed: () => context.push('/work-orders/edit', extra: wo),
+            ),
             IconButton(
               icon: const Icon(Icons.payment, color: Colors.white),
               tooltip: 'Receber & Emitir Recibo',

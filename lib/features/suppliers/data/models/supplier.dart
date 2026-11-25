@@ -1,22 +1,76 @@
+class SupplierAddress {
+  final String? id;
+  final String? fornecedorId;
+  final String logradouro;
+  final String numero;
+  final String? complemento;
+  final String bairro;
+  final String cidade;
+  final String estado;
+  final String cep;
+
+  SupplierAddress({
+    this.id,
+    this.fornecedorId,
+    required this.logradouro,
+    required this.numero,
+    this.complemento,
+    required this.bairro,
+    required this.cidade,
+    required this.estado,
+    required this.cep,
+  });
+
+  factory SupplierAddress.fromJson(Map<String, dynamic> json) {
+    return SupplierAddress(
+      id: json['id'] as String?,
+      fornecedorId: json['fornecedorId'] as String?,
+      logradouro: json['logradouro'] as String? ?? '',
+      numero: json['numero'] as String? ?? '',
+      complemento: json['complemento'] as String?,
+      bairro: json['bairro'] as String? ?? '',
+      cidade: json['cidade'] as String? ?? '',
+      estado: json['estado'] as String? ?? '',
+      cep: json['cep'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (id != null) 'id': id,
+      if (fornecedorId != null) 'fornecedorId': fornecedorId,
+      'logradouro': logradouro,
+      'numero': numero,
+      'complemento': complemento,
+      'bairro': bairro,
+      'cidade': cidade,
+      'estado': estado,
+      'cep': cep,
+    };
+  }
+}
+
 class Supplier {
   final String id;
-  final String tenantId;
-  final String tradeName; // Nome Fantasia
-  final String legalName; // Razão Social
+  final String tradeName; // 'nomeFantasia'
+  final String legalName; // 'razaoSocial'
   final String? cnpj;
-  final String? contactPerson;
-  final String phone;
+  final String? contactPerson; // 'contato'
+  final String phone; // 'telefone'
   final String? whatsapp;
   final String? email;
-  final String? address;
-  final int deliveryLeadTimeDays;
-  final String? paymentTerms;
-  final bool isActive;
-  final DateTime createdAt;
+  final SupplierAddress? endereco; // 'endereco'
+  final int deliveryLeadTimeDays; // 'prazoEntregaDias'
+  final String? paymentTerms; // 'condicaoPagamento'
+  final bool isActive; // 'ativo'
+  final DateTime createdAt; // 'criadoEm'
+
+  // Backward compatibility getters for existing UI code
+  String get tenantId => '11111111-1111-1111-1111-111111111111';
+  String? get address => endereco != null ? '${endereco!.logradouro}, ${endereco!.numero} - ${endereco!.cidade}/${endereco!.estado}' : null;
 
   Supplier({
     required this.id,
-    required this.tenantId,
     required this.tradeName,
     required this.legalName,
     this.cnpj,
@@ -24,16 +78,17 @@ class Supplier {
     required this.phone,
     this.whatsapp,
     this.email,
-    this.address,
+    this.endereco,
     this.deliveryLeadTimeDays = 2,
-    this.paymentTerms = '30 dias / Boleto / PIX',
+    this.paymentTerms,
     this.isActive = true,
     required this.createdAt,
+    String? tenantId,
+    String? address,
   });
 
   Supplier copyWith({
     String? id,
-    String? tenantId,
     String? tradeName,
     String? legalName,
     String? cnpj,
@@ -41,7 +96,7 @@ class Supplier {
     String? phone,
     String? whatsapp,
     String? email,
-    String? address,
+    SupplierAddress? endereco,
     int? deliveryLeadTimeDays,
     String? paymentTerms,
     bool? isActive,
@@ -49,7 +104,6 @@ class Supplier {
   }) {
     return Supplier(
       id: id ?? this.id,
-      tenantId: tenantId ?? this.tenantId,
       tradeName: tradeName ?? this.tradeName,
       legalName: legalName ?? this.legalName,
       cnpj: cnpj ?? this.cnpj,
@@ -57,7 +111,7 @@ class Supplier {
       phone: phone ?? this.phone,
       whatsapp: whatsapp ?? this.whatsapp,
       email: email ?? this.email,
-      address: address ?? this.address,
+      endereco: endereco ?? this.endereco,
       deliveryLeadTimeDays: deliveryLeadTimeDays ?? this.deliveryLeadTimeDays,
       paymentTerms: paymentTerms ?? this.paymentTerms,
       isActive: isActive ?? this.isActive,
@@ -66,42 +120,49 @@ class Supplier {
   }
 
   factory Supplier.fromJson(Map<String, dynamic> json) {
+    final enderecoJson = json['endereco'] as Map<String, dynamic>?;
     return Supplier(
-      id: json['id'] as String,
-      tenantId: json['tenantId'] as String? ?? '',
-      tradeName: json['tradeName'] as String,
-      legalName: json['legalName'] as String? ?? json['tradeName'] as String,
+      id: json['id'] as String? ?? '',
+      tradeName: json['nomeFantasia'] as String? ?? json['tradeName'] as String? ?? '',
+      legalName: json['razaoSocial'] as String? ?? json['legalName'] as String? ?? '',
       cnpj: json['cnpj'] as String?,
-      contactPerson: json['contactPerson'] as String?,
-      phone: json['phone'] as String? ?? '',
+      contactPerson: json['contato'] as String? ?? json['contactPerson'] as String?,
+      phone: json['telefone'] as String? ?? json['phone'] as String? ?? '',
       whatsapp: json['whatsapp'] as String?,
       email: json['email'] as String?,
-      address: json['address'] as String?,
-      deliveryLeadTimeDays: json['deliveryLeadTimeDays'] as int? ?? 2,
-      paymentTerms: json['paymentTerms'] as String? ?? 'À vista / PIX',
-      isActive: json['isActive'] as bool? ?? true,
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'] as String)
-          : DateTime.now(),
+      endereco: enderecoJson != null ? SupplierAddress.fromJson(enderecoJson) : null,
+      deliveryLeadTimeDays: json['prazoEntregaDias'] as int? ?? json['deliveryLeadTimeDays'] as int? ?? 2,
+      paymentTerms: json['condicaoPagamento'] as String? ?? json['paymentTerms'] as String?,
+      isActive: json['ativo'] as bool? ?? json['isActive'] as bool? ?? true,
+      createdAt: json['criadoEm'] != null
+          ? DateTime.parse(json['criadoEm'] as String)
+          : (json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : DateTime.now()),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'tenantId': tenantId,
-      'tradeName': tradeName,
-      'legalName': legalName,
+      if (id.isNotEmpty) 'id': id,
+      'nomeFantasia': tradeName,
+      'razaoSocial': legalName,
       'cnpj': cnpj,
-      'contactPerson': contactPerson,
-      'phone': phone,
+      'contato': contactPerson,
+      'telefone': phone,
       'whatsapp': whatsapp,
       'email': email,
-      'address': address,
-      'deliveryLeadTimeDays': deliveryLeadTimeDays,
-      'paymentTerms': paymentTerms,
-      'isActive': isActive,
-      'createdAt': createdAt.toIso8601String(),
+      'endereco': endereco?.toJson() ??
+          {
+            'logradouro': 'Rua Principal',
+            'numero': '100',
+            'complemento': null,
+            'bairro': 'Centro',
+            'cidade': 'São Paulo',
+            'estado': 'SP',
+            'cep': '01001000',
+          },
+      'prazoEntregaDias': deliveryLeadTimeDays,
+      'condicaoPagamento': paymentTerms ?? 'PIX / Boleto',
+      'ativo': isActive,
     };
   }
 }

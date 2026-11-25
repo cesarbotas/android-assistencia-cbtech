@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/primary_button.dart';
+import '../../auth/presentation/auth_controller.dart';
 import '../data/models/service_item.dart';
+import '../data/services_repository.dart';
 import 'services_controller.dart';
 
 class ServiceFormScreen extends ConsumerStatefulWidget {
@@ -21,20 +23,13 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
 
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
-  late String _category;
   late TextEditingController _priceController;
   late TextEditingController _timeController;
+
+  String? _selectedCategoryServiceId;
+  List<Map<String, String>> _categories = [];
   late bool _isActive;
   bool _isSaving = false;
-
-  final List<String> _categories = [
-    'Troca de Peça',
-    'Reparo em Placa',
-    'Limpeza/Banho',
-    'Software/Reset',
-    'Diagnóstico Técnico',
-    'Outros',
-  ];
 
   @override
   void initState() {
@@ -42,10 +37,27 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
     final s = widget.service;
     _nameController = TextEditingController(text: s?.name ?? '');
     _descriptionController = TextEditingController(text: s?.description ?? '');
-    _category = s?.category ?? 'Troca de Peça';
+    _selectedCategoryServiceId = s?.categoryServiceId.isNotEmpty == true
+        ? s?.categoryServiceId
+        : '11111111-1111-1111-1111-111111111111';
     _priceController = TextEditingController(text: s != null ? s.defaultPrice.toStringAsFixed(2) : '');
     _timeController = TextEditingController(text: s?.estimatedTimeMinutes.toString() ?? '60');
     _isActive = s?.isActive ?? true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadCategories();
+    });
+  }
+
+  Future<void> _loadCategories() async {
+    final repo = ref.read(servicesRepositoryProvider);
+    final cats = await repo.getServiceCategories();
+    setState(() {
+      _categories = cats;
+      if (_selectedCategoryServiceId == null && cats.isNotEmpty) {
+        _selectedCategoryServiceId = cats.first['id'];
+      }
+    });
   }
 
   @override
@@ -59,15 +71,20 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedCategoryServiceId == null || _selectedCategoryServiceId!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecione uma categoria de serviço.')),
+      );
+      return;
+    }
 
     setState(() => _isSaving = true);
 
     final serviceToSave = ServiceItem(
       id: widget.service?.id ?? '',
-      tenantId: widget.service?.tenantId ?? '',
       name: _nameController.text.trim(),
+      categoryServiceId: _selectedCategoryServiceId!,
       description: _descriptionController.text.trim().isNotEmpty ? _descriptionController.text.trim() : null,
-      category: _category,
       defaultPrice: double.tryParse(_priceController.text.replaceAll(',', '.')) ?? 0.0,
       estimatedTimeMinutes: int.tryParse(_timeController.text) ?? 60,
       isActive: _isActive,
@@ -94,13 +111,53 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
     }
   }
 
+  void _confirmDelete() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Excluir Serviço'),
+        content: Text('Deseja realmente excluir ${widget.service?.name}? Esta ação não pode ser desfeita.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              if (widget.service != null) {
+                await ref.read(servicesControllerProvider.notifier).deleteService(widget.service!.id);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Serviço excluído com sucesso.')),
+                  );
+                  context.pop();
+                }
+              }
+            },
+            child: const Text('Excluir', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.service != null;
+    final authState = ref.watch(authControllerProvider);
+    final userRole = (authState.userRole ?? '').toLowerCase();
+    final isAdminOrManager = userRole.contains('admin') || userRole.contains('gerente') || userRole.contains('administrador');
 
     return Scaffold(
       appBar: AppBar(
         title: Text(isEditing ? 'Editar Serviço' : 'Novo Serviço no Catálogo'),
+        actions: [
+          if (isEditing && isAdminOrManager)
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              tooltip: 'Excluir Serviço',
+              onPressed: _confirmDelete,
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -126,15 +183,18 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Categoria *', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                  const Text('Categoria de Serviço *', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String>(
-                    initialValue: _category,
-                    decoration: const InputDecoration(),
-                    items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                    value: _categories.any((c) => c['id'] == _selectedCategoryServiceId) ? _selectedCategoryServiceId : null,
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.category_outlined),
+                    ),
+                    items: _categories.map((c) => DropdownMenuItem(value: c['id'], child: Text(c['name']!))).toList(),
                     onChanged: (val) {
-                      if (val != null) setState(() => _category = val);
+                      if (val != null) setState(() => _selectedCategoryServiceId = val);
                     },
+                    validator: (val) => (val == null || val.isEmpty) ? 'Selecione uma categoria' : null,
                   ),
                 ],
               ),
@@ -157,7 +217,7 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
                   Expanded(
                     child: CustomTextField(
                       controller: _priceController,
-                      label: 'Preço Padrão de Mão de Obra (R\$) *',
+                      label: 'Preço Padrão (R\$) *',
                       hint: '150.00',
                       prefixIcon: Icons.attach_money,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -169,7 +229,7 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
                   Expanded(
                     child: CustomTextField(
                       controller: _timeController,
-                      label: 'Tempo Estimado (Minutos)',
+                      label: 'Tempo (Minutos)',
                       hint: '60',
                       prefixIcon: Icons.timer_outlined,
                       keyboardType: TextInputType.number,
@@ -192,6 +252,25 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
                 isLoading: _isSaving,
                 onPressed: _save,
               ),
+
+              if (isEditing && isAdminOrManager) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Excluir Serviço', style: TextStyle(fontWeight: FontWeight.bold)),
+                    onPressed: _confirmDelete,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 24),
             ],
           ),
         ),

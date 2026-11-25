@@ -255,14 +255,29 @@ class WorkOrdersRepository {
 
   WorkOrdersRepository(this._dio);
 
-  Future<List<WorkOrder>> getWorkOrders({String? search, WorkOrderStatus? status}) async {
+  Future<List<WorkOrder>> getWorkOrders({String? search, WorkOrderStatus? status, int pagina = 1, int tamanho = 10}) async {
     try {
-      final Map<String, dynamic> params = {};
+      final Map<String, dynamic> params = {
+        'pagina': pagina,
+        'tamanho': tamanho,
+      };
       if (search != null && search.isNotEmpty) params['search'] = search;
       if (status != null) params['status'] = status.name;
 
       final res = await _dio.get(ApiEndpoints.workOrders, queryParameters: params);
-      return (res.data as List).map((o) => WorkOrder.fromJson(o)).toList();
+      final data = res.data;
+      List<dynamic> items = [];
+      if (data is List) {
+        items = data;
+      } else if (data is Map && data['itens'] != null) {
+        items = data['itens'] as List<dynamic>;
+      } else if (data is Map && data['items'] != null) {
+        items = data['items'] as List<dynamic>;
+      } else if (data is Map && data['data'] != null) {
+        items = data['data'] as List<dynamic>;
+      }
+
+      return items.map((o) => WorkOrder.fromJson(o as Map<String, dynamic>)).toList();
     } catch (_) {
       return _localWorkOrders.where((wo) {
         if (status != null && wo.status != status) return false;
@@ -282,7 +297,17 @@ class WorkOrdersRepository {
   Future<WorkOrder?> getWorkOrderById(String id) async {
     try {
       final res = await _dio.get('${ApiEndpoints.workOrders}/$id');
-      return WorkOrder.fromJson(res.data);
+      final data = res.data;
+      if (data is Map<String, dynamic>) {
+        if (data['data'] != null && data['data'] is Map<String, dynamic>) {
+          return WorkOrder.fromJson(data['data'] as Map<String, dynamic>);
+        }
+        if (data['item'] != null && data['item'] is Map<String, dynamic>) {
+          return WorkOrder.fromJson(data['item'] as Map<String, dynamic>);
+        }
+        return WorkOrder.fromJson(data);
+      }
+      return null;
     } catch (_) {
       try {
         return _localWorkOrders.firstWhere((wo) => wo.id == id);
@@ -320,6 +345,20 @@ class WorkOrdersRepository {
     } catch (_) {
       _localWorkOrders.insert(0, createdWo);
       return createdWo;
+    }
+  }
+
+  Future<WorkOrder> updateWorkOrder(WorkOrder updatedWo) async {
+    try {
+      final res = await _dio.put('${ApiEndpoints.workOrders}/${updatedWo.id}', data: updatedWo.toJson());
+      if (res.data is Map<String, dynamic> && res.data['id'] != null) {
+        return WorkOrder.fromJson(res.data as Map<String, dynamic>);
+      }
+      return updatedWo;
+    } catch (_) {
+      final idx = _localWorkOrders.indexWhere((o) => o.id == updatedWo.id);
+      if (idx != -1) _localWorkOrders[idx] = updatedWo;
+      return updatedWo;
     }
   }
 

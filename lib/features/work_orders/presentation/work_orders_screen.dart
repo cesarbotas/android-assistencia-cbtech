@@ -23,6 +23,12 @@ class _WorkOrdersScreenState extends ConsumerState<WorkOrdersScreen> {
   final _dateFormat = DateFormat('dd/MM/yyyy');
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    ref.read(workOrdersControllerProvider.notifier).loadWorkOrders();
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -67,7 +73,7 @@ Caso tenha dúvidas, estamos à disposição!
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
-        onPressed: () => context.go('/work-orders/new'),
+        onPressed: () => context.push('/work-orders/new'),
       ),
       body: Column(
         children: [
@@ -172,7 +178,7 @@ Caso tenha dúvidas, estamos à disposição!
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(12),
-                                    onTap: () => context.go('/work-orders/detail', extra: os.id),
+                                    onTap: () => context.push('/work-orders/detail', extra: os.id),
                                     child: Padding(
                                       padding: const EdgeInsets.all(14),
                                       child: Column(

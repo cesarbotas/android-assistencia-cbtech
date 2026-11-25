@@ -23,16 +23,14 @@ class FinancesState {
   FinancesState copyWith({
     List<FinancialTransaction>? transactions,
     bool? isLoading,
-    TransactionType? filterType,
-    bool clearFilterType = false,
-    PaymentMethod? filterPaymentMethod,
-    bool clearFilterPaymentMethod = false,
+    Object? filterType = const _Sentinel(),
+    Object? filterPaymentMethod = const _Sentinel(),
   }) {
     return FinancesState(
       transactions: transactions ?? this.transactions,
       isLoading: isLoading ?? this.isLoading,
-      filterType: clearFilterType ? null : (filterType ?? this.filterType),
-      filterPaymentMethod: clearFilterPaymentMethod ? null : (filterPaymentMethod ?? this.filterPaymentMethod),
+      filterType: filterType is _Sentinel ? this.filterType : (filterType as TransactionType?),
+      filterPaymentMethod: filterPaymentMethod is _Sentinel ? this.filterPaymentMethod : (filterPaymentMethod as PaymentMethod?),
     );
   }
 
@@ -55,6 +53,10 @@ class FinancesState {
   double get currentBalance => totalIncome - totalExpense;
 }
 
+class _Sentinel {
+  const _Sentinel();
+}
+
 class FinancesController extends StateNotifier<FinancesState> {
   final FinancesRepository _repository;
 
@@ -73,19 +75,11 @@ class FinancesController extends StateNotifier<FinancesState> {
   }
 
   void setFilterType(TransactionType? type) {
-    if (type == state.filterType) {
-      state = state.copyWith(clearFilterType: true);
-    } else {
-      state = state.copyWith(filterType: type);
-    }
+    state = state.copyWith(filterType: type);
   }
 
   void setFilterPaymentMethod(PaymentMethod? method) {
-    if (method == state.filterPaymentMethod) {
-      state = state.copyWith(clearFilterPaymentMethod: true);
-    } else {
-      state = state.copyWith(filterPaymentMethod: method);
-    }
+    state = state.copyWith(filterPaymentMethod: method);
   }
 
   Future<bool> addTransaction({
@@ -101,10 +95,9 @@ class FinancesController extends StateNotifier<FinancesState> {
     try {
       final newTx = FinancialTransaction(
         id: '',
-        tenantId: '',
         title: title,
         type: type,
-        category: category,
+        category: category.label,
         paymentMethod: paymentMethod,
         amount: amount,
         date: DateTime.now(),
@@ -118,5 +111,12 @@ class FinancesController extends StateNotifier<FinancesState> {
     } catch (_) {
       return false;
     }
+  }
+
+  Future<void> deleteTransaction(String id) async {
+    try {
+      await _repository.deleteTransaction(id);
+      await loadTransactions();
+    } catch (_) {}
   }
 }

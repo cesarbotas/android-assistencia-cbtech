@@ -69,15 +69,8 @@ class SuppliersController extends StateNotifier<SuppliersState> {
 
   Future<bool> saveSupplier(Supplier supplier) async {
     try {
-      final saved = await _repo.saveSupplier(supplier);
-      final idx = state.suppliers.indexWhere((s) => s.id == saved.id);
-      List<Supplier> updated;
-      if (idx != -1) {
-        updated = List.from(state.suppliers)..[idx] = saved;
-      } else {
-        updated = [saved, ...state.suppliers];
-      }
-      state = state.copyWith(suppliers: updated);
+      await _repo.saveSupplier(supplier);
+      await loadSuppliers();
       return true;
     } catch (e) {
       state = state.copyWith(errorMessage: e.toString());
@@ -88,9 +81,7 @@ class SuppliersController extends StateNotifier<SuppliersState> {
   Future<void> deleteSupplier(String id) async {
     try {
       await _repo.deleteSupplier(id);
-      state = state.copyWith(
-        suppliers: state.suppliers.where((s) => s.id != id).toList(),
-      );
+      await loadSuppliers();
     } catch (e) {
       state = state.copyWith(errorMessage: e.toString());
     }
