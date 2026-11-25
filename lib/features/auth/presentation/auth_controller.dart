@@ -66,14 +66,15 @@ class AuthState {
 final authControllerProvider = StateNotifierProvider<AuthController, AuthState>((ref) {
   final authRepo = ref.watch(authRepositoryProvider);
   final storage = ref.watch(secureStorageServiceProvider);
-  return AuthController(authRepo, storage);
+  return AuthController(authRepo, storage, ref);
 });
 
 class AuthController extends StateNotifier<AuthState> {
   final AuthRepository _authRepo;
   final SecureStorageService _storage;
+  final Ref _ref;
 
-  AuthController(this._authRepo, this._storage) : super(AuthState()) {
+  AuthController(this._authRepo, this._storage, this._ref) : super(AuthState()) {
     checkInitialStatus();
   }
 
@@ -101,6 +102,8 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   Future<bool> login(String email, String password) async {
+    // Reseta o gatilho de expiração 401 para permitir nova tentativa de login
+    _ref.read(authExpiryProvider.notifier).state = 0;
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     try {

@@ -13,16 +13,20 @@ class CustomerDevice {
   final bool isActive; // 'ativo'
   final DateTime createdAt; // 'criadoEm'
 
-  // Backward compatibility getters
-  String get tenantId => '11111111-1111-1111-1111-111111111111';
-  String? get storage => null;
-  String? get notes => null;
+  // Backward compatibility getters & fields
+  final String? _tenantId;
+  final String? _storage;
+  final String? _notes;
+
+  String get tenantId => _tenantId ?? '11111111-1111-1111-1111-111111111111';
+  String? get storage => _storage;
+  String? get notes => _notes;
 
   CustomerDevice({
     required this.id,
     required this.customerId,
     required this.customerName,
-    required this.brandId,
+    this.brandId = '00000000-0000-0000-0000-000000000000',
     required this.brandName,
     required this.modelName,
     this.imei1,
@@ -35,7 +39,9 @@ class CustomerDevice {
     String? tenantId,
     String? storage,
     String? notes,
-  });
+  })  : _tenantId = tenantId,
+        _storage = storage,
+        _notes = notes;
 
   CustomerDevice copyWith({
     String? id,

@@ -1,4 +1,6 @@
+import 'package:uuid/uuid.dart';
 import 'budget.dart';
+import 'budget_item.dart';
 import 'work_order_attachment.dart';
 import 'work_order_history.dart';
 import 'work_order_status.dart';
@@ -128,33 +130,67 @@ class WorkOrder {
     final revisionsJson = json['budgetRevisions'] as List<dynamic>? ?? [];
     final historyJson = json['history'] as List<dynamic>? ?? [];
     final attachmentsJson = json['attachments'] as List<dynamic>? ?? [];
+    final pecasJson = json['pecas'] as List<dynamic>? ?? [];
+    final servicosJson = json['servicos'] as List<dynamic>? ?? [];
+
+    final idStr = json['id'] as String? ?? '';
+    final shortId = idStr.length >= 4 ? idStr.substring(0, 4).toUpperCase() : '0000';
+
+    final clienteId = json['clienteId'] as String? ?? json['customerId'] as String? ?? '';
+    final aparelhoId = json['aparelhoId'] as String? ?? json['deviceId'] as String? ?? '';
+
+    List<BudgetItem> budgetItems = [];
+    for (final p in pecasJson) {
+      budgetItems.add(BudgetItem(
+        id: const Uuid().v4(),
+        type: BudgetItemType.product,
+        productId: p['produtoId'] as String? ?? '',
+        description: p['descricao'] as String? ?? 'Peça / Componente',
+        quantity: p['quantidade'] as int? ?? 1,
+        costSnapshot: 0.0,
+        salePriceSnapshot: (p['valorUnitario'] as num?)?.toDouble() ?? 0.0,
+      ));
+    }
+    for (final s in servicosJson) {
+      budgetItems.add(BudgetItem(
+        id: const Uuid().v4(),
+        type: BudgetItemType.service,
+        serviceId: s['servicoId'] as String? ?? '',
+        description: s['descricao'] as String? ?? 'Serviço Técnico',
+        quantity: s['quantidade'] as int? ?? 1,
+        costSnapshot: 0.0,
+        salePriceSnapshot: (s['valorUnitario'] as num?)?.toDouble() ?? 0.0,
+      ));
+    }
+
+    Budget? budget = json['currentBudget'] != null
+        ? Budget.fromJson(json['currentBudget'] as Map<String, dynamic>)
+        : (budgetItems.isNotEmpty ? Budget(id: const Uuid().v4(), workOrderId: idStr, items: budgetItems, status: BudgetStatus.aprovado, createdAt: DateTime.now()) : null);
 
     return WorkOrder(
-      id: json['id'] as String,
+      id: idStr,
       tenantId: json['tenantId'] as String? ?? '',
-      sequentialNumber: json['sequentialNumber'] as String? ?? 'OS-0000',
-      customerId: json['customerId'] as String,
-      customerName: json['customerName'] as String? ?? '',
-      customerPhone: json['customerPhone'] as String? ?? '',
-      deviceId: json['deviceId'] as String?,
-      deviceBrand: json['deviceBrand'] as String? ?? '',
-      deviceModel: json['deviceModel'] as String? ?? '',
+      sequentialNumber: json['numeroOs'] as String? ?? json['sequentialNumber'] as String? ?? 'OS-$shortId',
+      customerId: clienteId,
+      customerName: json['nomeCliente'] as String? ?? json['customerName'] as String? ?? (clienteId.isNotEmpty ? 'Cliente (ID: ${clienteId.substring(0, 6)}...)' : 'Cliente'),
+      customerPhone: json['telefoneCliente'] as String? ?? json['customerPhone'] as String? ?? '(11) 90000-0000',
+      deviceId: aparelhoId,
+      deviceBrand: json['nomeMarca'] as String? ?? json['deviceBrand'] as String? ?? 'Marca',
+      deviceModel: json['modelo'] as String? ?? json['modelName'] as String? ?? json['deviceModel'] as String? ?? (aparelhoId.isNotEmpty ? 'Aparelho (ID: ${aparelhoId.substring(0, 6)}...)' : 'Aparelho'),
       deviceImei: json['deviceImei'] as String?,
       deviceColor: json['deviceColor'] as String?,
-      defectReported: json['defectReported'] as String? ?? '',
-      physicalCondition: json['physicalCondition'] as String?,
+      defectReported: json['problemaRelatado'] as String? ?? json['defectReported'] as String? ?? '',
+      physicalCondition: json['physicalCondition'] as String? ?? json['termoGarantia'] as String?,
       accessoriesLeft: json['accessoriesLeft'] as String?,
-      priority: json['priority'] as String? ?? 'Normal',
-      technicianId: json['technicianId'] as String?,
+      priority: json['prioridade'] as String? ?? json['priority'] as String? ?? 'Normal',
+      technicianId: json['tecnicoId'] as String? ?? json['technicianId'] as String?,
       technicianName: json['technicianName'] as String?,
-      status: WorkOrderStatus.fromString(json['status'] as String? ?? 'Aberta'),
+      status: WorkOrderStatus.fromString(json['status']?.toString() ?? 'Aberta'),
       deliveryForecast: json['deliveryForecast'] != null
           ? DateTime.parse(json['deliveryForecast'] as String)
           : null,
       diagnosis: json['diagnosis'] as String?,
-      currentBudget: json['currentBudget'] != null
-          ? Budget.fromJson(json['currentBudget'] as Map<String, dynamic>)
-          : null,
+      currentBudget: budget,
       budgetRevisions: revisionsJson
           .map((r) => Budget.fromJson(r as Map<String, dynamic>))
           .toList(),
@@ -164,9 +200,9 @@ class WorkOrder {
       attachments: attachmentsJson
           .map((a) => WorkOrderAttachment.fromJson(a as Map<String, dynamic>))
           .toList(),
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'] as String)
-          : DateTime.now(),
+      createdAt: json['criadoEm'] != null
+          ? DateTime.parse(json['criadoEm'] as String)
+          : (json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : DateTime.now()),
       finishedAt: json['finishedAt'] != null
           ? DateTime.parse(json['finishedAt'] as String)
           : null,
@@ -178,33 +214,29 @@ class WorkOrder {
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'tenantId': tenantId,
-      'sequentialNumber': sequentialNumber,
-      'customerId': customerId,
-      'customerName': customerName,
-      'customerPhone': customerPhone,
-      'deviceId': deviceId,
-      'deviceBrand': deviceBrand,
-      'deviceModel': deviceModel,
-      'deviceImei': deviceImei,
-      'deviceColor': deviceColor,
-      'defectReported': defectReported,
-      'physicalCondition': physicalCondition,
-      'accessoriesLeft': accessoriesLeft,
-      'priority': priority,
-      'technicianId': technicianId,
-      'technicianName': technicianName,
-      'status': status.label,
-      'deliveryForecast': deliveryForecast?.toIso8601String(),
-      'diagnosis': diagnosis,
-      'currentBudget': currentBudget?.toJson(),
-      'budgetRevisions': budgetRevisions.map((b) => b.toJson()).toList(),
-      'history': history.map((h) => h.toJson()).toList(),
-      'attachments': attachments.map((a) => a.toJson()).toList(),
-      'createdAt': createdAt.toIso8601String(),
-      'finishedAt': finishedAt?.toIso8601String(),
-      'deliveredAt': deliveredAt?.toIso8601String(),
+      if (id.isNotEmpty) 'id': id,
+      'clienteId': customerId,
+      'aparelhoId': deviceId,
+      'problemaRelatado': defectReported,
+      'prioridade': priority.toUpperCase(),
+      'status': status.name.toUpperCase(),
+      'termoGarantia': physicalCondition ?? 'Garantia de 90 dias',
+      'pecas': currentBudget?.items
+          .where((i) => i.type == BudgetItemType.product)
+          .map((p) => {
+                'produtoId': p.productId,
+                'quantidade': p.quantity,
+                'valorUnitario': p.salePriceSnapshot,
+              })
+          .toList() ?? [],
+      'servicos': currentBudget?.items
+          .where((i) => i.type == BudgetItemType.service)
+          .map((s) => {
+                'servicoId': s.serviceId,
+                'quantidade': s.quantity,
+                'valorUnitario': s.salePriceSnapshot,
+              })
+          .toList() ?? [],
     };
   }
 }

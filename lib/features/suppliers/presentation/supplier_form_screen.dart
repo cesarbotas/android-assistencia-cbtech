@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -26,11 +27,21 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
   late TextEditingController _phoneController;
   late TextEditingController _whatsappController;
   late TextEditingController _emailController;
-  late TextEditingController _addressController;
+
+  // Endereço Estruturado (Opcional)
+  late TextEditingController _zipCodeController;
+  late TextEditingController _streetController;
+  late TextEditingController _numberController;
+  late TextEditingController _complementController;
+  late TextEditingController _neighborhoodController;
+  late TextEditingController _cityController;
+  late TextEditingController _stateController;
+
   late TextEditingController _leadTimeController;
   late TextEditingController _paymentTermsController;
   late bool _isActive;
   bool _isSaving = false;
+  bool _isLoadingCep = false;
 
   @override
   void initState() {
@@ -43,8 +54,17 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
     _phoneController = TextEditingController(text: s?.phone ?? '');
     _whatsappController = TextEditingController(text: s?.whatsapp ?? '');
     _emailController = TextEditingController(text: s?.email ?? '');
-    _addressController = TextEditingController(text: s?.address ?? '');
-    _leadTimeController = TextEditingController(text: s?.deliveryLeadTimeDays.toString() ?? '1');
+
+    final addr = s?.endereco;
+    _zipCodeController = TextEditingController(text: addr?.cep ?? '');
+    _streetController = TextEditingController(text: addr?.logradouro ?? '');
+    _numberController = TextEditingController(text: addr?.numero ?? '');
+    _complementController = TextEditingController(text: addr?.complemento ?? '');
+    _neighborhoodController = TextEditingController(text: addr?.bairro ?? '');
+    _cityController = TextEditingController(text: addr?.cidade ?? '');
+    _stateController = TextEditingController(text: addr?.estado ?? '');
+
+    _leadTimeController = TextEditingController(text: s?.deliveryLeadTimeDays.toString() ?? '2');
     _paymentTermsController = TextEditingController(text: s?.paymentTerms ?? 'Boleto 28 dias / PIX');
     _isActive = s?.isActive ?? true;
   }
@@ -58,10 +78,55 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
     _phoneController.dispose();
     _whatsappController.dispose();
     _emailController.dispose();
-    _addressController.dispose();
+    _zipCodeController.dispose();
+    _streetController.dispose();
+    _numberController.dispose();
+    _complementController.dispose();
+    _neighborhoodController.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
     _leadTimeController.dispose();
     _paymentTermsController.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchCep(String cep) async {
+    final cleanCep = cep.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanCep.length != 8) return;
+
+    setState(() => _isLoadingCep = true);
+    try {
+      final dio = Dio();
+      final response = await dio.get('https://viacep.com.br/ws/$cleanCep/json/');
+      if (response.data != null && response.data['erro'] != true) {
+        final data = response.data;
+        setState(() {
+          _streetController.text = data['logradouro'] ?? '';
+          _neighborhoodController.text = data['bairro'] ?? '';
+          _cityController.text = data['localidade'] ?? '';
+          _stateController.text = data['uf'] ?? '';
+        });
+      }
+    } catch (_) {
+      // Ignora erro de consulta de CEP
+    } finally {
+      if (mounted) setState(() => _isLoadingCep = false);
+    }
+  }
+
+  void _clearAddress() {
+    setState(() {
+      _zipCodeController.clear();
+      _streetController.clear();
+      _numberController.clear();
+      _complementController.clear();
+      _neighborhoodController.clear();
+      _cityController.clear();
+      _stateController.clear();
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Endereço limpo com sucesso.')),
+    );
   }
 
   Future<void> _save() async {
@@ -69,9 +134,24 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
 
     setState(() => _isSaving = true);
 
+    // Endereço é opcional. Se houver logradouro ou cep preenchido, monta o objeto de endereço
+    SupplierAddress? supplierAddress;
+    if (_streetController.text.trim().isNotEmpty || _zipCodeController.text.trim().isNotEmpty) {
+      supplierAddress = SupplierAddress(
+        id: widget.supplier?.endereco?.id,
+        fornecedorId: widget.supplier?.id,
+        logradouro: _streetController.text.trim().isNotEmpty ? _streetController.text.trim() : 'Não informado',
+        numero: _numberController.text.trim().isNotEmpty ? _numberController.text.trim() : 'S/N',
+        complemento: _complementController.text.trim().isNotEmpty ? _complementController.text.trim() : null,
+        bairro: _neighborhoodController.text.trim().isNotEmpty ? _neighborhoodController.text.trim() : 'Geral',
+        cidade: _cityController.text.trim().isNotEmpty ? _cityController.text.trim() : 'Não informada',
+        estado: _stateController.text.trim().isNotEmpty ? _stateController.text.trim() : 'SP',
+        cep: _zipCodeController.text.trim().isNotEmpty ? _zipCodeController.text.trim() : '00000000',
+      );
+    }
+
     final supplierToSave = Supplier(
       id: widget.supplier?.id ?? '',
-      tenantId: widget.supplier?.tenantId ?? '',
       tradeName: _tradeNameController.text.trim(),
       legalName: _legalNameController.text.trim().isNotEmpty
           ? _legalNameController.text.trim()
@@ -81,9 +161,9 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
       phone: _phoneController.text.trim(),
       whatsapp: _whatsappController.text.trim().isNotEmpty ? _whatsappController.text.trim() : null,
       email: _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
-      address: _addressController.text.trim().isNotEmpty ? _addressController.text.trim() : null,
-      deliveryLeadTimeDays: int.tryParse(_leadTimeController.text) ?? 1,
-      paymentTerms: _paymentTermsController.text.trim(),
+      endereco: supplierAddress,
+      deliveryLeadTimeDays: int.tryParse(_leadTimeController.text) ?? 2,
+      paymentTerms: _paymentTermsController.text.trim().isNotEmpty ? _paymentTermsController.text.trim() : null,
       isActive: _isActive,
       createdAt: widget.supplier?.createdAt ?? DateTime.now(),
     );
@@ -169,7 +249,7 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
               const SizedBox(height: 24),
 
               const Text(
-                'Contatos & Localização',
+                'Contatos',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
               ),
               const SizedBox(height: 12),
@@ -206,12 +286,99 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
                 prefixIcon: Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 24),
+
+              // Seção de Endereço Opcional com CEP e Botão de Limpar
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Endereço (Opcional)',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  ),
+                  TextButton.icon(
+                    style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+                    icon: const Icon(Icons.clear, size: 16),
+                    label: const Text('Limpar Endereço'),
+                    onPressed: _clearAddress,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
               CustomTextField(
-                controller: _addressController,
-                label: 'Endereço Completo',
-                hint: 'Rua, número, bairro, cidade, CEP...',
-                prefixIcon: Icons.location_on_outlined,
+                controller: _zipCodeController,
+                label: 'CEP',
+                hint: '00000-000',
+                prefixIcon: Icons.map_outlined,
+                keyboardType: TextInputType.number,
+                suffixIcon: IconButton(
+                  icon: _isLoadingCep
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.search, color: AppColors.primary),
+                  tooltip: 'Buscar CEP',
+                  onPressed: () => _fetchCep(_zipCodeController.text),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: CustomTextField(
+                      controller: _streetController,
+                      label: 'Logradouro',
+                      hint: 'Rua, Avenida...',
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 1,
+                    child: CustomTextField(
+                      controller: _numberController,
+                      label: 'Número',
+                      hint: '123',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              CustomTextField(
+                controller: _complementController,
+                label: 'Complemento',
+                hint: 'Galpão 2, Sala 4...',
+              ),
+              const SizedBox(height: 14),
+
+              CustomTextField(
+                controller: _neighborhoodController,
+                label: 'Bairro',
+                hint: 'Centro...',
+              ),
+              const SizedBox(height: 14),
+
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: CustomTextField(
+                      controller: _cityController,
+                      label: 'Cidade',
+                      hint: 'São Paulo',
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 1,
+                    child: CustomTextField(
+                      controller: _stateController,
+                      label: 'UF',
+                      hint: 'SP',
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
 
@@ -226,7 +393,7 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
                     child: CustomTextField(
                       controller: _leadTimeController,
                       label: 'Prazo Médio Entrega (Dias)',
-                      hint: 'Ex: 1 ou 2',
+                      hint: 'Ex: 2',
                       prefixIcon: Icons.local_shipping_outlined,
                       keyboardType: TextInputType.number,
                     ),

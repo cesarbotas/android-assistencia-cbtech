@@ -43,7 +43,7 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_business),
         label: const Text('Novo Fornecedor', style: TextStyle(fontWeight: FontWeight.bold)),
-        onPressed: () => context.go('/suppliers/new'),
+        onPressed: () => context.push('/suppliers/new'),
       ),
       body: Column(
         children: [
@@ -92,7 +92,7 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             child: InkWell(
                               borderRadius: BorderRadius.circular(12),
-                              onTap: () => context.go('/suppliers/edit', extra: s),
+                              onTap: () => context.push('/suppliers/edit', extra: s),
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
                                 child: Column(

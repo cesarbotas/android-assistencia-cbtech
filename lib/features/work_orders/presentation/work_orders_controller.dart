@@ -97,6 +97,10 @@ class WorkOrdersController extends StateNotifier<WorkOrdersState> {
     }
   }
 
+  void setSelectedWorkOrder(WorkOrder wo) {
+    state = state.copyWith(selectedWorkOrder: wo, isLoading: false);
+  }
+
   Future<void> selectWorkOrder(String id) async {
     state = state.copyWith(isLoading: true);
     try {
@@ -111,6 +115,17 @@ class WorkOrdersController extends StateNotifier<WorkOrdersState> {
     try {
       final created = await _repo.createWorkOrder(order);
       state = state.copyWith(workOrders: [created, ...state.workOrders]);
+      return true;
+    } catch (e) {
+      state = state.copyWith(errorMessage: e.toString());
+      return false;
+    }
+  }
+
+  Future<bool> updateWorkOrder(WorkOrder order) async {
+    try {
+      final updated = await _repo.updateWorkOrder(order);
+      _updateLocalList(updated);
       return true;
     } catch (e) {
       state = state.copyWith(errorMessage: e.toString());
