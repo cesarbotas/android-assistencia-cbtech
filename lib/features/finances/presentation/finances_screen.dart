@@ -157,15 +157,57 @@ class _FinancesScreenState extends ConsumerState<FinancesScreen> {
                                 title: Text(tx.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                                 subtitle: Text(
                                   '${tx.paymentMethod.label} • ${_dateFormat.format(tx.date)}${tx.referenceId != null ? ' (${tx.referenceId})' : ''}',
-                                  style: const TextStyle(fontSize: 11),
+                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                                 ),
-                                trailing: Text(
-                                  '${isIncome ? '+' : '-'} ${_currencyFormat.format(tx.amount)}',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                    color: isIncome ? Colors.green.shade800 : Colors.red.shade800,
-                                  ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '${isIncome ? '+' : '-'} ${_currencyFormat.format(tx.amount)}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: isIncome ? Colors.green.shade800 : Colors.red.shade800,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                                      tooltip: 'Excluir Lançamento',
+                                      onPressed: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (ctx) => AlertDialog(
+                                            title: const Text('Excluir Lançamento'),
+                                            content: Text('Deseja realmente excluir "${tx.title}"?'),
+                                            actionsAlignment: MainAxisAlignment.spaceBetween,
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(ctx),
+                                                child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+                                              ),
+                                              ElevatedButton(
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.red,
+                                                  foregroundColor: Colors.white,
+                                                ),
+                                                onPressed: () async {
+                                                  Navigator.pop(ctx);
+                                                  await controller.deleteTransaction(tx.id);
+                                                  if (context.mounted) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      const SnackBar(content: Text('Lançamento excluído com sucesso.')),
+                                                    );
+                                                  }
+                                                },
+                                                child: const Text('Excluir', style: TextStyle(fontWeight: FontWeight.bold)),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ],
                                 ),
                               ),
                             );

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/network/api_client.dart';
+import 'models/category.dart';
 import 'models/product.dart';
 
 final productsRepositoryProvider = Provider<ProductsRepository>((ref) {
@@ -17,114 +18,133 @@ class ProductsRepository {
   final List<Product> _localProducts = [
     Product(
       id: 'p1',
-      tenantId: '11111111-1111-1111-1111-111111111111',
       sku: 'TEL-IP13-OLED',
       name: 'Tela Display OLED iPhone 13',
-      category: 'Telas',
-      description: 'Módulo frontal completo original importado OLED com aro.',
-      compatibleModels: 'Apple iPhone 13 / iPhone 13 Pro',
+      categoryId: 'cat1',
+      supplierId: 'sup3',
       salePrice: 450.00,
       costPrice: 220.00,
       currentStock: 2,
       minStock: 3,
-      supplierName: 'iParts Especialista Apple',
-      supplierPartCode: 'IP-DS-13',
+      unit: 'UN',
+      isActive: true,
       createdAt: DateTime.now().subtract(const Duration(days: 60)),
     ),
     Product(
       id: 'p2',
-      tenantId: '11111111-1111-1111-1111-111111111111',
       sku: 'BAT-IP13-ORIG',
       name: 'Bateria Original iPhone 13',
-      category: 'Baterias',
-      description: 'Célula de alta capacidade 3227mAh com flex.',
-      compatibleModels: 'Apple iPhone 13',
+      categoryId: 'cat2',
+      supplierId: 'sup3',
       salePrice: 180.00,
       costPrice: 85.00,
       currentStock: 1,
       minStock: 2,
-      supplierName: 'iParts Especialista Apple',
-      supplierPartCode: 'IP-BAT-13',
+      unit: 'UN',
+      isActive: true,
       createdAt: DateTime.now().subtract(const Duration(days: 45)),
     ),
     Product(
       id: 'p3',
-      tenantId: '11111111-1111-1111-1111-111111111111',
       sku: 'SUB-S22U-USBC',
       name: 'Conector de Carga Galaxy S22 Ultra',
-      category: 'Conectores',
-      description: 'Sub-placa de conector Tipo C com microfone integrado e flex.',
-      compatibleModels: 'Samsung Galaxy S22 Ultra (SM-S908)',
+      categoryId: 'cat3',
+      supplierId: 'sup1',
       salePrice: 120.00,
       costPrice: 45.00,
       currentStock: 5,
       minStock: 2,
-      supplierName: 'TotalCell Distribuidora',
-      supplierPartCode: 'TC-S22U-SUB',
+      unit: 'UN',
+      isActive: true,
       createdAt: DateTime.now().subtract(const Duration(days: 30)),
-    ),
-    Product(
-      id: 'p4',
-      tenantId: '11111111-1111-1111-1111-111111111111',
-      sku: 'BAT-MOT-E30F',
-      name: 'Bateria Motorola Edge 30 Fusion',
-      category: 'Baterias',
-      description: 'Bateria 4400mAh modelo NH40 original.',
-      compatibleModels: 'Motorola Edge 30 Fusion',
-      salePrice: 130.00,
-      costPrice: 60.00,
-      currentStock: 4,
-      minStock: 2,
-      supplierName: 'MegaPeças Express',
-      supplierPartCode: 'MP-NH40',
-      createdAt: DateTime.now().subtract(const Duration(days: 20)),
-    ),
-    Product(
-      id: 'p5',
-      tenantId: '11111111-1111-1111-1111-111111111111',
-      sku: 'TEL-RED-N12',
-      name: 'Módulo Frontal Redmi Note 12',
-      category: 'Telas',
-      description: 'Display AMOLED 120Hz com touch.',
-      compatibleModels: 'Xiaomi Redmi Note 12 4G / 5G',
-      salePrice: 210.00,
-      costPrice: 95.00,
-      currentStock: 6,
-      minStock: 3,
-      supplierName: 'TotalCell Distribuidora',
-      supplierPartCode: 'TC-RN12-AMOLED',
-      createdAt: DateTime.now().subtract(const Duration(days: 10)),
     ),
   ];
 
+  List<Category> _defaultCategories() => [
+        Category(id: 'cat1', name: 'Telas', description: 'Displays e vidros'),
+        Category(id: 'cat2', name: 'Baterias', description: 'Baterias e células'),
+        Category(id: 'cat3', name: 'Conectores', description: 'Sub-placas e flex de carga'),
+        Category(id: 'cat4', name: 'Câmeras', description: 'Câmeras frontal e traseira'),
+        Category(id: 'cat5', name: 'Placas', description: 'Placas principais'),
+        Category(id: 'cat6', name: 'Acessórios', description: 'Cabos e carregadores'),
+      ];
+
   ProductsRepository(this._dio);
 
-  Future<List<Product>> getProducts({String? search, String? category, bool? lowStockOnly}) async {
+  Future<List<Category>> getCategories({int pagina = 1, int tamanho = 100, String? search}) async {
     try {
-      final Map<String, dynamic> params = {};
-      if (search != null) params['search'] = search;
-      if (category != null) params['category'] = category;
-      if (lowStockOnly != null) params['lowStockOnly'] = lowStockOnly;
+      final Map<String, dynamic> params = {
+        'pagina': pagina,
+        'tamanho': tamanho,
+      };
+      if (search != null && search.isNotEmpty) params['search'] = search;
+
+      final res = await _dio.get(ApiEndpoints.categories, queryParameters: params);
+      final data = res.data;
+      List<dynamic> items = [];
+      if (data is List) {
+        items = data;
+      } else if (data is Map && data['itens'] != null) {
+        items = data['itens'] as List<dynamic>;
+      } else if (data is Map && data['items'] != null) {
+        items = data['items'] as List<dynamic>;
+      } else if (data is Map && data['data'] != null) {
+        items = data['data'] as List<dynamic>;
+      }
+
+      final list = items.map((c) => Category.fromJson(c as Map<String, dynamic>)).toList();
+      if (list.isNotEmpty) return list;
+      return _defaultCategories();
+    } catch (_) {
+      return _defaultCategories();
+    }
+  }
+
+  Future<List<Product>> getProducts({String? search, String? categoriaId, String? fornecedorId, int pagina = 1, int tamanho = 100}) async {
+    try {
+      final Map<String, dynamic> params = {
+        'pagina': pagina,
+        'tamanho': tamanho,
+      };
+      if (search != null && search.isNotEmpty) params['search'] = search;
+      if (categoriaId != null && categoriaId.isNotEmpty) params['categoriaId'] = categoriaId;
+      if (fornecedorId != null && fornecedorId.isNotEmpty) params['fornecedorId'] = fornecedorId;
 
       final res = await _dio.get(
         ApiEndpoints.products,
         queryParameters: params,
       );
-      return (res.data as List).map((p) => Product.fromJson(p)).toList();
+
+      final data = res.data;
+      List<dynamic> items = [];
+      if (data is List) {
+        items = data;
+      } else if (data is Map && data['itens'] != null) {
+        items = data['itens'] as List<dynamic>;
+      } else if (data is Map && data['items'] != null) {
+        items = data['items'] as List<dynamic>;
+      } else if (data is Map && data['data'] != null) {
+        items = data['data'] as List<dynamic>;
+      } else if (data is Map && data['id'] != null) {
+        items = [data];
+      }
+
+      final list = items.map((p) => Product.fromJson(p as Map<String, dynamic>)).toList();
+      if (list.isNotEmpty) return list;
+      return _localProducts;
     } catch (_) {
       return _localProducts.where((p) {
-        if (category != null && category != 'Todas' && p.category != category) {
+        if (categoriaId != null && categoriaId.isNotEmpty && p.categoryId != categoriaId) {
           return false;
         }
-        if (lowStockOnly == true && !p.isLowStock) {
+        if (fornecedorId != null && fornecedorId.isNotEmpty && p.supplierId != fornecedorId) {
           return false;
         }
         if (search != null && search.isNotEmpty) {
           final q = search.toLowerCase();
           final mSku = p.sku.toLowerCase().contains(q);
           final mName = p.name.toLowerCase().contains(q);
-          final mCompat = p.compatibleModels.toLowerCase().contains(q);
-          return mSku || mName || mCompat;
+          return mSku || mName;
         }
         return true;
       }).toList();
@@ -135,10 +155,16 @@ class ProductsRepository {
     try {
       if (product.id.isEmpty) {
         final res = await _dio.post(ApiEndpoints.products, data: product.toJson());
-        return Product.fromJson(res.data);
+        if (res.data is Map<String, dynamic> && res.data['id'] != null) {
+          return Product.fromJson(res.data as Map<String, dynamic>);
+        }
+        return product;
       } else {
         final res = await _dio.put('${ApiEndpoints.products}/${product.id}', data: product.toJson());
-        return Product.fromJson(res.data);
+        if (res.data is Map<String, dynamic> && res.data['id'] != null) {
+          return Product.fromJson(res.data as Map<String, dynamic>);
+        }
+        return product;
       }
     } catch (_) {
       if (product.id.isEmpty) {
