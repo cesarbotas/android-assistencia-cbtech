@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:cbtech/features/customers/data/customers_repository.dart';
+import 'package:cbtech/features/devices/data/devices_repository.dart';
 import 'package:cbtech/features/work_orders/data/models/budget.dart';
 import 'package:cbtech/features/work_orders/data/models/budget_item.dart';
 import 'package:cbtech/features/work_orders/data/models/work_order.dart';
@@ -74,7 +76,9 @@ void main() {
     setUp(() {
       final dio = Dio();
       repo = WorkOrdersRepository(dio);
-      controller = WorkOrdersController(repo);
+      final custRepo = CustomersRepository(dio);
+      final devRepo = DevicesRepository(dio);
+      controller = WorkOrdersController(repo, custRepo, devRepo);
     });
 
     test('Loads initial work orders and filters', () async {

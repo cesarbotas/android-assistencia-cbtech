@@ -55,6 +55,16 @@ class ServicesRepository {
       isActive: true,
       createdAt: DateTime.now().subtract(const Duration(days: 40)),
     ),
+    ServiceItem(
+      id: 'srv5',
+      name: 'Troca de Conector de Carga (Sub-placa)',
+      categoryServiceId: '11111111-1111-1111-1111-111111111111',
+      description: 'Substituição da porta USB-C / Lightning com testes de corrente.',
+      defaultPrice: 110.00,
+      estimatedTimeMinutes: 60,
+      isActive: true,
+      createdAt: DateTime.now().subtract(const Duration(days: 30)),
+    ),
   ];
 
   ServicesRepository(this._dio);

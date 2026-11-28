@@ -127,89 +127,123 @@ class WorkOrder {
   }
 
   factory WorkOrder.fromJson(Map<String, dynamic> json) {
-    final revisionsJson = json['budgetRevisions'] as List<dynamic>? ?? [];
-    final historyJson = json['history'] as List<dynamic>? ?? [];
-    final attachmentsJson = json['attachments'] as List<dynamic>? ?? [];
-    final pecasJson = json['pecas'] as List<dynamic>? ?? [];
-    final servicosJson = json['servicos'] as List<dynamic>? ?? [];
+    try {
+      final revisionsJson = json['budgetRevisions'] as List<dynamic>? ?? [];
+      final historyJson = json['history'] as List<dynamic>? ?? [];
+      final attachmentsJson = json['attachments'] as List<dynamic>? ?? [];
+      final pecasJson = json['pecas'] as List<dynamic>? ?? [];
+      final servicosJson = json['servicos'] as List<dynamic>? ?? [];
 
-    final idStr = json['id'] as String? ?? '';
-    final shortId = idStr.length >= 4 ? idStr.substring(0, 4).toUpperCase() : '0000';
+      final idStr = json['id']?.toString() ?? '';
+      final shortId = idStr.length >= 4 ? idStr.substring(0, 4).toUpperCase() : '0000';
 
-    final clienteId = json['clienteId'] as String? ?? json['customerId'] as String? ?? '';
-    final aparelhoId = json['aparelhoId'] as String? ?? json['deviceId'] as String? ?? '';
+      final clienteId = json['clienteId']?.toString() ?? json['customerId']?.toString() ?? '';
+      final aparelhoId = json['aparelhoId']?.toString() ?? json['deviceId']?.toString() ?? '';
 
-    List<BudgetItem> budgetItems = [];
-    for (final p in pecasJson) {
-      budgetItems.add(BudgetItem(
-        id: const Uuid().v4(),
-        type: BudgetItemType.product,
-        productId: p['produtoId'] as String? ?? '',
-        description: p['descricao'] as String? ?? 'Peça / Componente',
-        quantity: p['quantidade'] as int? ?? 1,
-        costSnapshot: 0.0,
-        salePriceSnapshot: (p['valorUnitario'] as num?)?.toDouble() ?? 0.0,
-      ));
+      List<BudgetItem> budgetItems = [];
+      for (final p in pecasJson) {
+        if (p is Map<String, dynamic>) {
+          budgetItems.add(BudgetItem(
+            id: const Uuid().v4(),
+            type: BudgetItemType.product,
+            productId: p['produtoId']?.toString() ?? '',
+            description: p['descricao']?.toString() ?? 'Peça / Componente',
+            quantity: (p['quantidade'] as num?)?.toInt() ?? 1,
+            costSnapshot: 0.0,
+            salePriceSnapshot: (p['valorUnitario'] as num?)?.toDouble() ?? 0.0,
+          ));
+        }
+      }
+      for (final s in servicosJson) {
+        if (s is Map<String, dynamic>) {
+          budgetItems.add(BudgetItem(
+            id: const Uuid().v4(),
+            type: BudgetItemType.service,
+            serviceId: s['servicoId']?.toString() ?? '',
+            description: s['descricao']?.toString() ?? 'Serviço Técnico',
+            quantity: (s['quantidade'] as num?)?.toInt() ?? 1,
+            costSnapshot: 0.0,
+            salePriceSnapshot: (s['valorUnitario'] as num?)?.toDouble() ?? 0.0,
+          ));
+        }
+      }
+
+      Budget? budget;
+      if (json['currentBudget'] is Map<String, dynamic>) {
+        budget = Budget.fromJson(json['currentBudget'] as Map<String, dynamic>);
+      } else if (budgetItems.isNotEmpty) {
+        budget = Budget(
+          id: const Uuid().v4(),
+          workOrderId: idStr,
+          items: budgetItems,
+          status: BudgetStatus.aprovado,
+          createdAt: DateTime.now(),
+        );
+      }
+
+      return WorkOrder(
+        id: idStr,
+        tenantId: json['tenantId']?.toString() ?? '',
+        sequentialNumber: json['numeroOs']?.toString() ?? json['sequentialNumber']?.toString() ?? 'OS-$shortId',
+        customerId: clienteId,
+        customerName: json['nomeCliente']?.toString() ?? json['customerName']?.toString() ?? (clienteId.isNotEmpty ? 'Cliente (ID: ${clienteId.substring(0, 6)}...)' : 'Cliente'),
+        customerPhone: json['telefoneCliente']?.toString() ?? json['customerPhone']?.toString() ?? '(11) 90000-0000',
+        deviceId: aparelhoId,
+        deviceBrand: json['nomeMarca']?.toString() ?? json['deviceBrand']?.toString() ?? 'Marca',
+        deviceModel: json['modelo']?.toString() ?? json['modelName']?.toString() ?? json['deviceModel']?.toString() ?? (aparelhoId.isNotEmpty ? 'Aparelho (ID: ${aparelhoId.substring(0, 6)}...)' : 'Aparelho'),
+        deviceImei: json['deviceImei']?.toString() ?? json['imei1']?.toString(),
+        deviceColor: json['deviceColor']?.toString() ?? json['cor']?.toString(),
+        defectReported: json['problemaRelatado']?.toString() ?? json['defectReported']?.toString() ?? '',
+        physicalCondition: json['physicalCondition']?.toString() ?? json['termoGarantia']?.toString(),
+        accessoriesLeft: json['accessoriesLeft']?.toString(),
+        priority: json['prioridade']?.toString() ?? json['priority']?.toString() ?? 'Normal',
+        technicianId: json['tecnicoId']?.toString() ?? json['technicianId']?.toString(),
+        technicianName: json['technicianName']?.toString(),
+        status: WorkOrderStatus.fromString(json['status']?.toString() ?? 'Aberta'),
+        deliveryForecast: json['deliveryForecast'] != null
+            ? DateTime.tryParse(json['deliveryForecast'].toString())
+            : null,
+        diagnosis: json['diagnosis']?.toString(),
+        currentBudget: budget,
+        budgetRevisions: revisionsJson
+            .whereType<Map<String, dynamic>>()
+            .map((r) => Budget.fromJson(r))
+            .toList(),
+        history: historyJson
+            .whereType<Map<String, dynamic>>()
+            .map((h) => WorkOrderHistory.fromJson(h))
+            .toList(),
+        attachments: attachmentsJson
+            .whereType<Map<String, dynamic>>()
+            .map((a) => WorkOrderAttachment.fromJson(a))
+            .toList(),
+        createdAt: json['criadoEm'] != null
+            ? DateTime.parse(json['criadoEm'].toString())
+            : (json['createdAt'] != null ? DateTime.parse(json['createdAt'].toString()) : DateTime.now()),
+        finishedAt: json['finishedAt'] != null
+            ? DateTime.tryParse(json['finishedAt'].toString())
+            : null,
+        deliveredAt: json['deliveredAt'] != null
+            ? DateTime.tryParse(json['deliveredAt'].toString())
+            : null,
+      );
+    } catch (_) {
+      final idStr = json['id']?.toString() ?? '';
+      return WorkOrder(
+        id: idStr,
+        tenantId: '',
+        sequentialNumber: 'OS-${idStr.length >= 4 ? idStr.substring(0, 4).toUpperCase() : "0000"}',
+        customerId: json['clienteId']?.toString() ?? '',
+        customerName: 'Cliente',
+        customerPhone: '(11) 90000-0000',
+        deviceBrand: 'Marca',
+        deviceModel: 'Aparelho',
+        defectReported: json['problemaRelatado']?.toString() ?? 'Atendimento de OS',
+        priority: json['prioridade']?.toString() ?? 'Normal',
+        status: WorkOrderStatus.fromString(json['status']?.toString() ?? 'Aberta'),
+        createdAt: DateTime.now(),
+      );
     }
-    for (final s in servicosJson) {
-      budgetItems.add(BudgetItem(
-        id: const Uuid().v4(),
-        type: BudgetItemType.service,
-        serviceId: s['servicoId'] as String? ?? '',
-        description: s['descricao'] as String? ?? 'Serviço Técnico',
-        quantity: s['quantidade'] as int? ?? 1,
-        costSnapshot: 0.0,
-        salePriceSnapshot: (s['valorUnitario'] as num?)?.toDouble() ?? 0.0,
-      ));
-    }
-
-    Budget? budget = json['currentBudget'] != null
-        ? Budget.fromJson(json['currentBudget'] as Map<String, dynamic>)
-        : (budgetItems.isNotEmpty ? Budget(id: const Uuid().v4(), workOrderId: idStr, items: budgetItems, status: BudgetStatus.aprovado, createdAt: DateTime.now()) : null);
-
-    return WorkOrder(
-      id: idStr,
-      tenantId: json['tenantId'] as String? ?? '',
-      sequentialNumber: json['numeroOs'] as String? ?? json['sequentialNumber'] as String? ?? 'OS-$shortId',
-      customerId: clienteId,
-      customerName: json['nomeCliente'] as String? ?? json['customerName'] as String? ?? (clienteId.isNotEmpty ? 'Cliente (ID: ${clienteId.substring(0, 6)}...)' : 'Cliente'),
-      customerPhone: json['telefoneCliente'] as String? ?? json['customerPhone'] as String? ?? '(11) 90000-0000',
-      deviceId: aparelhoId,
-      deviceBrand: json['nomeMarca'] as String? ?? json['deviceBrand'] as String? ?? 'Marca',
-      deviceModel: json['modelo'] as String? ?? json['modelName'] as String? ?? json['deviceModel'] as String? ?? (aparelhoId.isNotEmpty ? 'Aparelho (ID: ${aparelhoId.substring(0, 6)}...)' : 'Aparelho'),
-      deviceImei: json['deviceImei'] as String?,
-      deviceColor: json['deviceColor'] as String?,
-      defectReported: json['problemaRelatado'] as String? ?? json['defectReported'] as String? ?? '',
-      physicalCondition: json['physicalCondition'] as String? ?? json['termoGarantia'] as String?,
-      accessoriesLeft: json['accessoriesLeft'] as String?,
-      priority: json['prioridade'] as String? ?? json['priority'] as String? ?? 'Normal',
-      technicianId: json['tecnicoId'] as String? ?? json['technicianId'] as String?,
-      technicianName: json['technicianName'] as String?,
-      status: WorkOrderStatus.fromString(json['status']?.toString() ?? 'Aberta'),
-      deliveryForecast: json['deliveryForecast'] != null
-          ? DateTime.parse(json['deliveryForecast'] as String)
-          : null,
-      diagnosis: json['diagnosis'] as String?,
-      currentBudget: budget,
-      budgetRevisions: revisionsJson
-          .map((r) => Budget.fromJson(r as Map<String, dynamic>))
-          .toList(),
-      history: historyJson
-          .map((h) => WorkOrderHistory.fromJson(h as Map<String, dynamic>))
-          .toList(),
-      attachments: attachmentsJson
-          .map((a) => WorkOrderAttachment.fromJson(a as Map<String, dynamic>))
-          .toList(),
-      createdAt: json['criadoEm'] != null
-          ? DateTime.parse(json['criadoEm'] as String)
-          : (json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : DateTime.now()),
-      finishedAt: json['finishedAt'] != null
-          ? DateTime.parse(json['finishedAt'] as String)
-          : null,
-      deliveredAt: json['deliveredAt'] != null
-          ? DateTime.parse(json['deliveredAt'] as String)
-          : null,
-    );
   }
 
   Map<String, dynamic> toJson() {
