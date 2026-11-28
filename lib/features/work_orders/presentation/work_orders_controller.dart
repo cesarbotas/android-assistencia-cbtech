@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../customers/data/customers_repository.dart';
+import '../../devices/data/devices_repository.dart';
 import '../data/models/budget.dart';
 import '../data/models/work_order.dart';
 import '../data/models/work_order_status.dart';
@@ -62,13 +64,17 @@ class WorkOrdersState {
 final workOrdersControllerProvider =
     StateNotifierProvider<WorkOrdersController, WorkOrdersState>((ref) {
   final repo = ref.watch(workOrdersRepositoryProvider);
-  return WorkOrdersController(repo);
+  final custRepo = ref.watch(customersRepositoryProvider);
+  final devRepo = ref.watch(devicesRepositoryProvider);
+  return WorkOrdersController(repo, custRepo, devRepo);
 });
 
 class WorkOrdersController extends StateNotifier<WorkOrdersState> {
   final WorkOrdersRepository _repo;
+  final CustomersRepository _custRepo;
+  final DevicesRepository _devRepo;
 
-  WorkOrdersController(this._repo) : super(WorkOrdersState()) {
+  WorkOrdersController(this._repo, this._custRepo, this._devRepo) : super(WorkOrdersState()) {
     loadWorkOrders();
   }
 
@@ -104,11 +110,49 @@ class WorkOrdersController extends StateNotifier<WorkOrdersState> {
   Future<void> selectWorkOrder(String id) async {
     state = state.copyWith(isLoading: true);
     try {
-      final wo = await _repo.getWorkOrderById(id);
-      state = state.copyWith(selectedWorkOrder: wo, isLoading: false);
+      final fetchedWo = await _repo.getWorkOrderById(id);
+      if (fetchedWo != null) {
+        // Exibe a Ordem de Serviço imediatamente na tela sem travar no loader!
+        state = state.copyWith(selectedWorkOrder: fetchedWo, isLoading: false);
+
+        // Busca o nome do cliente e do aparelho em segundo plano sem bloquear a UI
+        _enrichWorkOrderInBackground(fetchedWo);
+      } else {
+        state = state.copyWith(isLoading: false);
+      }
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
     }
+  }
+
+  Future<void> _enrichWorkOrderInBackground(WorkOrder wo) async {
+    try {
+      var current = wo;
+      if (current.customerId.isNotEmpty && (current.customerName == 'Cliente' || current.customerName.contains('Cliente (ID:'))) {
+        try {
+          final customers = await _custRepo.getCustomers(tamanho: 100);
+          final match = customers.where((c) => c.id == current.customerId).firstOrNull;
+          if (match != null) {
+            current = current.copyWith(customerName: match.name, customerPhone: match.phone);
+          }
+        } catch (_) {}
+      }
+      if (current.deviceId != null && current.deviceId!.isNotEmpty && (current.deviceModel == 'Aparelho' || current.deviceModel.contains('Aparelho (ID:'))) {
+        try {
+          final devices = await _devRepo.getCustomerDevices(tamanho: 100);
+          final matchDev = devices.where((d) => d.id == current.deviceId).firstOrNull;
+          if (matchDev != null) {
+            current = current.copyWith(
+              deviceBrand: matchDev.brandName,
+              deviceModel: matchDev.modelName,
+              deviceColor: matchDev.color,
+              deviceImei: matchDev.imei1,
+            );
+          }
+        } catch (_) {}
+      }
+      state = state.copyWith(selectedWorkOrder: current);
+    } catch (_) {}
   }
 
   Future<bool> createWorkOrder(WorkOrder order) async {

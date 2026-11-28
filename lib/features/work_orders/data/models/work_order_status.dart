@@ -64,8 +64,28 @@ enum WorkOrderStatus {
     }
   }
 
-  // Transições flexíveis para permitir avançar para qualquer status
+  // Lista de próximas transições permitidas
   List<WorkOrderStatus> get nextAllowedTransitions {
-    return WorkOrderStatus.values.where((st) => st != this).toList();
+    switch (this) {
+      case WorkOrderStatus.aberta:
+        return [WorkOrderStatus.diagnostico, WorkOrderStatus.orcamentoPendente, WorkOrderStatus.cancelada];
+      case WorkOrderStatus.diagnostico:
+        return [WorkOrderStatus.orcamentoPendente, WorkOrderStatus.cancelada];
+      case WorkOrderStatus.orcamentoPendente:
+        return [WorkOrderStatus.aprovada, WorkOrderStatus.cancelada];
+      case WorkOrderStatus.aprovada:
+        return [WorkOrderStatus.emReparo, WorkOrderStatus.aguardandoPeca, WorkOrderStatus.cancelada];
+      case WorkOrderStatus.aguardandoPeca:
+        return [WorkOrderStatus.emReparo, WorkOrderStatus.cancelada];
+      case WorkOrderStatus.emReparo:
+        return [WorkOrderStatus.testes, WorkOrderStatus.aguardandoPeca];
+      case WorkOrderStatus.testes:
+        return [WorkOrderStatus.concluida, WorkOrderStatus.emReparo];
+      case WorkOrderStatus.concluida:
+        return [WorkOrderStatus.entregue];
+      case WorkOrderStatus.entregue:
+      case WorkOrderStatus.cancelada:
+        return [];
+    }
   }
 }

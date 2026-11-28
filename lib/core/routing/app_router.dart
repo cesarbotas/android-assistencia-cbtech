@@ -10,7 +10,6 @@ import '../../features/customers/presentation/customer_form_screen.dart';
 import '../../features/customers/presentation/customers_screen.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/devices/data/models/customer_device.dart';
-import '../../features/devices/data/models/device_model.dart';
 import '../../features/devices/presentation/device_form_screen.dart';
 import '../../features/devices/presentation/devices_screen.dart';
 import '../../features/finances/presentation/finances_screen.dart';
@@ -95,10 +94,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: 'detail',
             builder: (context, state) {
               final extra = state.extra;
+              final queryId = state.uri.queryParameters['id'];
+
               if (extra is WorkOrder) {
-                return WorkOrderDetailScreen(workOrder: extra);
-              } else if (extra is String) {
+                return WorkOrderDetailScreen(workOrder: extra, workOrderId: extra.id);
+              } else if (extra is String && extra.isNotEmpty) {
                 return WorkOrderDetailScreen(workOrderId: extra);
+              } else if (queryId != null && queryId.isNotEmpty) {
+                return WorkOrderDetailScreen(workOrderId: queryId);
               }
               return const WorkOrdersScreen();
             },
