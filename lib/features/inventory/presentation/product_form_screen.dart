@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/primary_button.dart';
+import '../../../core/widgets/searchable_dropdown.dart';
 import '../../auth/presentation/auth_controller.dart';
+import '../../suppliers/data/models/supplier.dart';
 import '../../suppliers/presentation/suppliers_controller.dart';
 import '../data/models/category.dart';
 import '../data/models/product.dart';
@@ -228,39 +230,27 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Categoria Dropdown
-                DropdownButtonFormField<String>(
-                  value: prodState.categories.any((c) => c.id == _selectedCategoryId) ? _selectedCategoryId : null,
-                  decoration: const InputDecoration(
-                    labelText: 'Categoria *',
-                    prefixIcon: Icon(Icons.category_outlined),
-                  ),
-                  items: prodState.categories.map((cat) {
-                    return DropdownMenuItem(
-                      value: cat.id,
-                      child: Text(cat.name),
-                    );
-                  }).toList(),
-                  onChanged: (val) => setState(() => _selectedCategoryId = val),
-                  validator: (val) => (val == null || val.isEmpty) ? 'Selecione uma categoria' : null,
+                // Categoria Searchable Dropdown
+                SearchableDropdown<Category>(
+                  label: 'Categoria *',
+                  prefixIcon: Icons.category_outlined,
+                  value: prodState.categories.where((c) => c.id == _selectedCategoryId).firstOrNull,
+                  items: prodState.categories,
+                  itemLabelBuilder: (cat) => cat.name,
+                  onChanged: (cat) => setState(() => _selectedCategoryId = cat?.id),
+                  validator: (_) => _selectedCategoryId == null ? 'Selecione uma categoria' : null,
                 ),
                 const SizedBox(height: 14),
 
-                // Fornecedor Dropdown
-                DropdownButtonFormField<String>(
-                  value: supState.suppliers.any((s) => s.id == _selectedSupplierId) ? _selectedSupplierId : null,
-                  decoration: const InputDecoration(
-                    labelText: 'Fornecedor Principal *',
-                    prefixIcon: Icon(Icons.store_outlined),
-                  ),
-                  items: supState.suppliers.map((sup) {
-                    return DropdownMenuItem(
-                      value: sup.id,
-                      child: Text(sup.tradeName),
-                    );
-                  }).toList(),
-                  onChanged: (val) => setState(() => _selectedSupplierId = val),
-                  validator: (val) => (val == null || val.isEmpty) ? 'Selecione um fornecedor' : null,
+                // Fornecedor Searchable Dropdown
+                SearchableDropdown<Supplier>(
+                  label: 'Fornecedor Principal *',
+                  prefixIcon: Icons.store_outlined,
+                  value: supState.suppliers.where((s) => s.id == _selectedSupplierId).firstOrNull,
+                  items: supState.suppliers,
+                  itemLabelBuilder: (sup) => sup.tradeName,
+                  onChanged: (sup) => setState(() => _selectedSupplierId = sup?.id),
+                  validator: (_) => _selectedSupplierId == null ? 'Selecione um fornecedor' : null,
                 ),
                 const SizedBox(height: 24),
 
@@ -324,14 +314,13 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: DropdownButtonFormField<String>(
+                      child: SearchableDropdown<String>(
+                        label: 'Unidade de Medida',
+                        prefixIcon: Icons.straighten,
                         value: _units.contains(_unit) ? _unit : 'UN',
-                        decoration: const InputDecoration(
-                          labelText: 'Unidade de Medida',
-                          prefixIcon: Icon(Icons.straighten),
-                        ),
-                        items: _units.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
-                        onChanged: (val) => setState(() => _unit = val ?? 'UN'),
+                        items: _units,
+                        itemLabelBuilder: (u) => u,
+                        onChanged: (u) => setState(() => _unit = u ?? 'UN'),
                       ),
                     ),
                   ],

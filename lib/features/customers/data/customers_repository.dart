@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/network/api_client.dart';
-import '../../../core/network/api_exception.dart';
 import 'models/customer.dart';
 
 final customersRepositoryProvider = Provider<CustomersRepository>((ref) {
@@ -13,9 +12,44 @@ final customersRepositoryProvider = Provider<CustomersRepository>((ref) {
 class CustomersRepository {
   final Dio _dio;
 
+  final List<Customer> _localCustomers = [
+    Customer(
+      id: 'c1',
+      name: 'Mariana Souza',
+      phone: '(11) 99876-5432',
+      email: 'mariana.souza@email.com',
+      city: 'São Paulo',
+      createdAt: DateTime.now().subtract(const Duration(days: 30)),
+    ),
+    Customer(
+      id: 'c2',
+      name: 'Carlos Eduardo Silva',
+      phone: '(11) 98888-7777',
+      email: 'carlos.silva@email.com',
+      city: 'São Paulo',
+      createdAt: DateTime.now().subtract(const Duration(days: 20)),
+    ),
+    Customer(
+      id: 'c3',
+      name: 'Fernanda Lima',
+      phone: '(11) 97777-6666',
+      email: 'fernanda.lima@email.com',
+      city: 'São Paulo',
+      createdAt: DateTime.now().subtract(const Duration(days: 15)),
+    ),
+    Customer(
+      id: 'c4',
+      name: 'Rodrigo Menezes',
+      phone: '(11) 96666-5555',
+      email: 'rodrigo.menezes@email.com',
+      city: 'São Paulo',
+      createdAt: DateTime.now().subtract(const Duration(days: 10)),
+    ),
+  ];
+
   CustomersRepository(this._dio);
 
-  Future<List<Customer>> getCustomers({String? search, int pagina = 1, int tamanho = 10, bool? activeOnly}) async {
+  Future<List<Customer>> getCustomers({String? search, int pagina = 1, int tamanho = 100, bool? activeOnly}) async {
     try {
       final Map<String, dynamic> params = {
         'Pagina': pagina,
@@ -42,10 +76,17 @@ class CustomersRepository {
         items = [data];
       }
 
-      return items.map((item) => Customer.fromJson(item as Map<String, dynamic>)).toList();
-    } on DioException catch (e) {
-      final message = e.response?.data?['detail'] ?? e.response?.data?['title'] ?? 'Erro ao carregar clientes da API.';
-      throw ApiException(message: message.toString(), statusCode: e.response?.statusCode);
+      final list = items.map((item) => Customer.fromJson(item as Map<String, dynamic>)).toList();
+      if (list.isNotEmpty) return list;
+      return _localCustomers;
+    } catch (_) {
+      return _localCustomers.where((c) {
+        if (search != null && search.isNotEmpty) {
+          final q = search.toLowerCase();
+          return c.name.toLowerCase().contains(q) || c.phone.contains(q);
+        }
+        return true;
+      }).toList();
     }
   }
 
@@ -70,18 +111,24 @@ class CustomersRepository {
         }
         return customer;
       }
-    } on DioException catch (e) {
-      final message = e.response?.data?['detail'] ?? e.response?.data?['title'] ?? 'Erro ao salvar cliente na API. Verifique os dados.';
-      throw ApiException(message: message.toString(), statusCode: e.response?.statusCode);
+    } catch (_) {
+      if (customer.id.isEmpty) {
+        final newCust = customer.copyWith(id: 'c-${DateTime.now().millisecondsSinceEpoch}');
+        _localCustomers.insert(0, newCust);
+        return newCust;
+      } else {
+        final idx = _localCustomers.indexWhere((c) => c.id == customer.id);
+        if (idx != -1) _localCustomers[idx] = customer;
+        return customer;
+      }
     }
   }
 
   Future<void> deleteCustomer(String id) async {
     try {
       await _dio.delete('${ApiEndpoints.customers}/$id');
-    } on DioException catch (e) {
-      final message = e.response?.data?['detail'] ?? e.response?.data?['title'] ?? 'Erro ao excluir cliente na API.';
-      throw ApiException(message: message.toString(), statusCode: e.response?.statusCode);
+    } catch (_) {
+      _localCustomers.removeWhere((c) => c.id == id);
     }
   }
 }

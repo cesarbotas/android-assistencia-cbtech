@@ -23,9 +23,11 @@ class _WorkOrdersScreenState extends ConsumerState<WorkOrdersScreen> {
   final _dateFormat = DateFormat('dd/MM/yyyy');
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    ref.read(workOrdersControllerProvider.notifier).loadWorkOrders();
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(workOrdersControllerProvider.notifier).loadWorkOrders();
+    });
   }
 
   @override
@@ -178,7 +180,7 @@ Caso tenha dúvidas, estamos à disposição!
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(12),
-                                    onTap: () => context.push('/work-orders/detail', extra: os.id),
+                                    onTap: () => context.push('/work-orders/detail?id=${os.id}', extra: os),
                                     child: Padding(
                                       padding: const EdgeInsets.all(14),
                                       child: Column(
