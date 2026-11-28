@@ -23,9 +23,11 @@ class _WorkOrdersScreenState extends ConsumerState<WorkOrdersScreen> {
   final _dateFormat = DateFormat('dd/MM/yyyy');
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    ref.read(workOrdersControllerProvider.notifier).loadWorkOrders();
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(workOrdersControllerProvider.notifier).loadWorkOrders();
+    });
   }
 
   @override

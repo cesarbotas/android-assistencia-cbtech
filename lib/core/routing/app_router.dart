@@ -206,7 +206,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       // Financeiro
       GoRoute(
-        path: '/finance',
+        path: '/finances',
         builder: (context, state) => const FinancesScreen(),
       ),
     ],
