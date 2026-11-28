@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/primary_button.dart';
+import '../../../core/widgets/searchable_dropdown.dart';
+import '../../customers/data/models/customer.dart';
 import '../../customers/presentation/customers_controller.dart';
 import '../data/models/brand.dart';
 import '../data/models/customer_device.dart';
@@ -33,7 +35,6 @@ class _DeviceFormScreenState extends ConsumerState<DeviceFormScreen> {
   late TextEditingController _imei2Controller;
   late TextEditingController _serialController;
   late TextEditingController _colorController;
-  late TextEditingController _notesController;
   bool _isSaving = false;
 
   @override
@@ -47,7 +48,6 @@ class _DeviceFormScreenState extends ConsumerState<DeviceFormScreen> {
     _imei2Controller = TextEditingController(text: d?.imei2 ?? '');
     _serialController = TextEditingController(text: d?.serialNumber ?? '');
     _colorController = TextEditingController(text: d?.color ?? 'Preto');
-    _notesController = TextEditingController(text: '');
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadBrandsAndCascade();
@@ -89,7 +89,6 @@ class _DeviceFormScreenState extends ConsumerState<DeviceFormScreen> {
     _imei2Controller.dispose();
     _serialController.dispose();
     _colorController.dispose();
-    _notesController.dispose();
     super.dispose();
   }
 
@@ -161,28 +160,21 @@ class _DeviceFormScreenState extends ConsumerState<DeviceFormScreen> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: custState.customers.any((c) => c.id == _selectedCustomerId) ? _selectedCustomerId : null,
-                decoration: const InputDecoration(
-                  labelText: 'Selecione o Cliente *',
-                  prefixIcon: Icon(Icons.person),
-                ),
-                items: custState.customers.map((c) {
-                  return DropdownMenuItem(
-                    value: c.id,
-                    child: Text('${c.name} (${c.phone})'),
-                  );
-                }).toList(),
-                onChanged: (val) {
-                  if (val != null) {
-                    final c = custState.customers.firstWhere((x) => x.id == val);
+              SearchableDropdown<Customer>(
+                label: 'Selecione o Cliente *',
+                prefixIcon: Icons.person_outline,
+                value: custState.customers.where((c) => c.id == _selectedCustomerId).firstOrNull,
+                items: custState.customers,
+                itemLabelBuilder: (c) => '${c.name} (${c.phone})',
+                onChanged: (c) {
+                  if (c != null) {
                     setState(() {
-                      _selectedCustomerId = val;
+                      _selectedCustomerId = c.id;
                       _selectedCustomerName = c.name;
                     });
                   }
                 },
-                validator: (val) => val == null ? 'Selecione um cliente' : null,
+                validator: (_) => _selectedCustomerId == null ? 'Selecione um cliente' : null,
               ),
               const SizedBox(height: 24),
 
@@ -191,15 +183,12 @@ class _DeviceFormScreenState extends ConsumerState<DeviceFormScreen> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<Brand>(
-                value: devState.brands.any((b) => b.id == _selectedBrand?.id) ? _selectedBrand : null,
-                decoration: const InputDecoration(
-                  labelText: 'Fabricante / Marca *',
-                  prefixIcon: Icon(Icons.business),
-                ),
-                items: devState.brands.map((b) {
-                  return DropdownMenuItem(value: b, child: Text(b.name));
-                }).toList(),
+              SearchableDropdown<Brand>(
+                label: 'Fabricante / Marca *',
+                prefixIcon: Icons.business_outlined,
+                value: devState.brands.where((b) => b.id == _selectedBrand?.id).firstOrNull ?? _selectedBrand,
+                items: devState.brands,
+                itemLabelBuilder: (b) => b.name,
                 onChanged: (brand) {
                   if (brand != null) {
                     setState(() => _selectedBrand = brand);
@@ -208,32 +197,11 @@ class _DeviceFormScreenState extends ConsumerState<DeviceFormScreen> {
                 },
               ),
               const SizedBox(height: 14),
-              if (_availableModels.isNotEmpty) ...[
-                DropdownButtonFormField<DeviceModel>(
-                  value: _availableModels.contains(_selectedModel) ? _selectedModel : null,
-                  decoration: const InputDecoration(
-                    labelText: 'Catálogo de Modelos Sugeridos',
-                    prefixIcon: Icon(Icons.smartphone),
-                  ),
-                  items: _availableModels.map((m) {
-                    return DropdownMenuItem(value: m, child: Text(m.name));
-                  }).toList(),
-                  onChanged: (model) {
-                    if (model != null) {
-                      setState(() {
-                        _selectedModel = model;
-                        _customModelController.text = model.name;
-                      });
-                    }
-                  },
-                ),
-                const SizedBox(height: 14),
-              ],
               CustomTextField(
                 controller: _customModelController,
                 label: 'Nome do Modelo (Customizável) *',
                 hint: 'Ex: iPhone 13 Pro Max ou Galaxy S23',
-                prefixIcon: Icons.edit,
+                prefixIcon: Icons.edit_outlined,
                 validator: (val) =>
                     (val == null || val.trim().isEmpty) ? 'Informe o modelo' : null,
               ),

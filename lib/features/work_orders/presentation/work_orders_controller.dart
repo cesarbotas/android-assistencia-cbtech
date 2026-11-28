@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../customers/data/customers_repository.dart';
+import '../../devices/data/devices_repository.dart';
 import '../data/models/budget.dart';
 import '../data/models/work_order.dart';
 import '../data/models/work_order_status.dart';
@@ -62,13 +64,15 @@ class WorkOrdersState {
 final workOrdersControllerProvider =
     StateNotifierProvider<WorkOrdersController, WorkOrdersState>((ref) {
   final repo = ref.watch(workOrdersRepositoryProvider);
-  return WorkOrdersController(repo);
+  final custRepo = ref.watch(customersRepositoryProvider);
+  final devRepo = ref.watch(devicesRepositoryProvider);
+  return WorkOrdersController(repo, custRepo, devRepo);
 });
 
 class WorkOrdersController extends StateNotifier<WorkOrdersState> {
   final WorkOrdersRepository _repo;
 
-  WorkOrdersController(this._repo) : super(WorkOrdersState()) {
+  WorkOrdersController(this._repo, CustomersRepository _, DevicesRepository __) : super(WorkOrdersState()) {
     loadWorkOrders();
   }
 
@@ -104,8 +108,12 @@ class WorkOrdersController extends StateNotifier<WorkOrdersState> {
   Future<void> selectWorkOrder(String id) async {
     state = state.copyWith(isLoading: true);
     try {
-      final wo = await _repo.getWorkOrderById(id);
-      state = state.copyWith(selectedWorkOrder: wo, isLoading: false);
+      final fetchedWo = await _repo.getWorkOrderById(id);
+      if (fetchedWo != null) {
+        state = state.copyWith(selectedWorkOrder: fetchedWo, isLoading: false);
+      } else {
+        state = state.copyWith(isLoading: false);
+      }
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: e.toString());
     }

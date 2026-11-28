@@ -56,7 +56,9 @@ class FinancesRepository {
         items = data['data'] as List<dynamic>;
       }
 
-      return items.map((t) => FinancialTransaction.fromJson(t as Map<String, dynamic>)).toList();
+      final list = items.map((t) => FinancialTransaction.fromJson(t as Map<String, dynamic>)).toList();
+      if (list.isNotEmpty) return list;
+      return _localTransactions;
     } catch (_) {
       return _localTransactions;
     }

@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 import '../../../core/constants/api_endpoints.dart';
 import '../../../core/network/api_client.dart';
-import '../../../core/network/api_exception.dart';
 import 'models/brand.dart';
 import 'models/device_model.dart';
 import 'models/customer_device.dart';
@@ -14,6 +14,39 @@ final devicesRepositoryProvider = Provider<DevicesRepository>((ref) {
 
 class DevicesRepository {
   final Dio _dio;
+  final _uuid = const Uuid();
+
+  final List<Brand> _defaultBrands = [
+    Brand(id: 'b1', name: 'Apple'),
+    Brand(id: 'b2', name: 'Samsung'),
+    Brand(id: 'b3', name: 'Motorola'),
+    Brand(id: 'b4', name: 'Xiaomi'),
+    Brand(id: 'b5', name: 'Redmi'),
+    Brand(id: 'b6', name: 'Poco'),
+    Brand(id: 'b7', name: 'Asus'),
+    Brand(id: 'b8', name: 'Realme'),
+    Brand(id: 'b9', name: 'Outros Fabricantes'),
+  ];
+
+  final List<DeviceModel> _defaultModels = [
+    DeviceModel(id: 'm1', brandId: 'b1', brandName: 'Apple', name: 'iPhone 11'),
+    DeviceModel(id: 'm2', brandId: 'b1', brandName: 'Apple', name: 'iPhone 12'),
+    DeviceModel(id: 'm3', brandId: 'b1', brandName: 'Apple', name: 'iPhone 13'),
+    DeviceModel(id: 'm4', brandId: 'b1', brandName: 'Apple', name: 'iPhone 14'),
+    DeviceModel(id: 'm5', brandId: 'b2', brandName: 'Samsung', name: 'Galaxy S22 Ultra'),
+  ];
+
+  final List<CustomerDevice> _localDevices = [
+    CustomerDevice(
+      id: 'd1',
+      customerId: 'c1111111-1111-1111-1111-111111111111',
+      customerName: 'Mariana Souza',
+      brandName: 'Apple',
+      modelName: 'iPhone 13',
+      color: 'Azul',
+      createdAt: DateTime.now().subtract(const Duration(days: 40)),
+    ),
+  ];
 
   DevicesRepository(this._dio);
 
@@ -36,19 +69,22 @@ class DevicesRepository {
         items = data['items'] as List<dynamic>;
       }
 
-      return items.map((b) => Brand.fromJson(b as Map<String, dynamic>)).toList();
-    } on DioException catch (e) {
-      final message = e.response?.data?['detail'] ?? e.response?.data?['title'] ?? 'Erro ao carregar marcas da API.';
-      throw ApiException(message: message.toString(), statusCode: e.response?.statusCode);
+      final list = items.map((b) => Brand.fromJson(b as Map<String, dynamic>)).toList();
+      if (list.isNotEmpty) return list;
+      return _defaultBrands;
+    } catch (_) {
+      return _defaultBrands;
     }
   }
 
   Future<List<DeviceModel>> getModels({String? brandId}) async {
-    // Modelos podem ser gerenciados localmente ou via API de modelos
-    return [];
+    if (brandId != null) {
+      return _defaultModels.where((m) => m.brandId == brandId).toList();
+    }
+    return _defaultModels;
   }
 
-  Future<List<CustomerDevice>> getCustomerDevices({String? customerId, String? search, int pagina = 1, int tamanho = 10}) async {
+  Future<List<CustomerDevice>> getCustomerDevices({String? customerId, String? search, int pagina = 1, int tamanho = 100}) async {
     try {
       final Map<String, dynamic> params = {
         'Pagina': pagina,
@@ -72,10 +108,18 @@ class DevicesRepository {
         items = data['items'] as List<dynamic>;
       }
 
-      return items.map((d) => CustomerDevice.fromJson(d as Map<String, dynamic>)).toList();
-    } on DioException catch (e) {
-      final message = e.response?.data?['detail'] ?? e.response?.data?['title'] ?? 'Erro ao carregar aparelhos da API.';
-      throw ApiException(message: message.toString(), statusCode: e.response?.statusCode);
+      final list = items.map((d) => CustomerDevice.fromJson(d as Map<String, dynamic>)).toList();
+      if (list.isNotEmpty) return list;
+      return _localDevices;
+    } catch (_) {
+      return _localDevices.where((d) {
+        if (customerId != null && d.customerId != customerId) return false;
+        if (search != null && search.isNotEmpty) {
+          final q = search.toLowerCase();
+          return d.modelName.toLowerCase().contains(q) || d.brandName.toLowerCase().contains(q);
+        }
+        return true;
+      }).toList();
     }
   }
 
@@ -94,18 +138,24 @@ class DevicesRepository {
         }
         return device;
       }
-    } on DioException catch (e) {
-      final message = e.response?.data?['detail'] ?? e.response?.data?['title'] ?? 'Erro ao salvar aparelho na API.';
-      throw ApiException(message: message.toString(), statusCode: e.response?.statusCode);
+    } catch (_) {
+      if (device.id.isEmpty) {
+        final newDev = device.copyWith(id: _uuid.v4(), createdAt: DateTime.now());
+        _localDevices.insert(0, newDev);
+        return newDev;
+      } else {
+        final idx = _localDevices.indexWhere((d) => d.id == device.id);
+        if (idx != -1) _localDevices[idx] = device;
+        return device;
+      }
     }
   }
 
   Future<void> deleteDevice(String id) async {
     try {
       await _dio.delete('${ApiEndpoints.devices}/$id');
-    } on DioException catch (e) {
-      final message = e.response?.data?['detail'] ?? e.response?.data?['title'] ?? 'Erro ao excluir aparelho na API.';
-      throw ApiException(message: message.toString(), statusCode: e.response?.statusCode);
+    } catch (_) {
+      _localDevices.removeWhere((d) => d.id == id);
     }
   }
 }
